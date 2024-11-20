@@ -294,7 +294,7 @@ class LlamaAssistant(QMainWindow):
                 self.dropped_image = file_path
                 self.ui_manager.input_field.setPlaceholderText("Enter a prompt for the image...")
                 self.show_image_thumbnail(file_path)
-            elif file_path.lower().endswith((".pdf", "doc", ".docx", ".txt", "ppt", ".pptx", ".xls", ".xlsx")):
+            elif file_path.lower().endswith((".pdf", "doc", ".docx", ".txt")):
                 if file_path not in self.dropped_files:
                     self.dropped_files.add(file_path)
                     self.ui_manager.input_field.setPlaceholderText("Enter a prompt for the document...")
