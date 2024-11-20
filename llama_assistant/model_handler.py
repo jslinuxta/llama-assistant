@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Set, Optional
 import time
 from threading import Timer
 from llama_cpp import Llama
@@ -10,7 +10,7 @@ from llama_cpp.llama_chat_format import (
 )
 
 from llama_assistant import config
-
+from llama_assistant.agent import RAGAgent
 
 class Model:
     def __init__(
@@ -36,7 +36,7 @@ class Model:
 class ModelHandler:
     def __init__(self):
         self.supported_models: List[Model] = []
-        self.loaded_model: Optional[Dict] = None
+        self.loaded_agent: Optional[Dict] = None
         self.current_model_id: Optional[str] = None
         self.unload_timer: Optional[Timer] = None
 
@@ -52,22 +52,25 @@ class ModelHandler:
     def remove_supported_model(self, model_id: str):
         self.supported_models = [m for m in self.supported_models if m.model_id != model_id]
         if self.current_model_id == model_id:
-            self.unload_model()
+            self.unload_agent()
 
-    def load_model(self, model_id: str) -> Optional[Dict]:
+    def load_agent(self, model_id: str) -> Optional[Dict]:
         self.refresh_supported_models()
-        if self.current_model_id == model_id and self.loaded_model:
-            return self.loaded_model
+        if self.current_model_id == model_id and self.loaded_agent:
+            return self.loaded_agent
 
-        self.unload_model()  # Unload the current model if any
+        self.unload_agent()  # Unload the current model if any
 
         model = next((m for m in self.supported_models if m.model_id == model_id), None)
         if not model:
             print(f"Model with ID {model_id} not found.")
             return None
+        
+        print('Load agent =========')
 
         if model.is_online():
             if model.model_type == "text":
+                print("load online model")
                 loaded_model = Llama.from_pretrained(
                     repo_id=model.repo_id,
                     filename=model.filename,
@@ -123,66 +126,78 @@ class ModelHandler:
                 return None
         else:
             # Load model from local path
+            print("load local model")
             loaded_model = Llama(model_path=model.model_path)
 
-        self.loaded_model = {
+        agent = RAGAgent(
+            config.embed_model_name,
+            llm=loaded_model,
+        )
+
+        self.loaded_agent = {
             "model": loaded_model,
-            "last_used": time.time(),
+            "agent": agent,
+            "last_used": time.time()
         }
         self.current_model_id = model_id
         self._schedule_unload()
+        
+        return self.loaded_agent
 
-        return self.loaded_model
-
-    def unload_model(self):
-        if self.loaded_model:
+    def unload_agent(self):
+        if self.loaded_agent:
             print(f"Unloading model: {self.current_model_id}")
-            self.loaded_model = None
+            self.loaded_agent = None
             self.current_model_id = None
         if self.unload_timer:
             self.unload_timer.cancel()
             self.unload_timer = None
 
+    async def run_agent(self, agent: RAGAgent, message: str, lookup_files: Set, image: str, stream: bool):
+        response = await agent.run(query_str=message, lookup_files=lookup_files, image=image, streaming=stream)
+        return response
+    
     def chat_completion(
         self,
         model_id: str,
         message: str,
         image: Optional[str] = None,
+        lookup_files: Optional[Set[str] ] = set(),
         stream: bool = False,
     ) -> str:
-        model_data = self.load_model(model_id)
-        if not model_data:
+        print("In chat_completion")
+        agent_data = self.load_agent(model_id)
+        agent = agent_data.get("agent")
+        if not agent_data:
             return "Failed to load model"
 
-        model = model_data["model"]
-        model_data["last_used"] = time.time()
+        agent_data["last_used"] = time.time()
         self._schedule_unload()
 
-        if image:
-            response = model.create_chat_completion(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": message},
-                            {"type": "image_url", "image_url": {"url": image}},
-                        ],
-                    }
-                ],
-                stream=stream,
-            )
-        else:
-            response = model.create_chat_completion(
-                messages=[{"role": "user", "content": message}], stream=stream
-            )
-
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            response = loop.run_until_complete(self.run_agent(agent, message, lookup_files, image, stream))
+        except RuntimeError:  # no running event loop
+            response = asyncio.run(self.run_agent(agent, message, lookup_files, image, stream))
+        
         return response
+    
+    def update_chat_history(self, message: str, role: str):
+        agent = self.loaded_agent.get("agent")
+        if agent:
+            agent.chat_history.append({"role": role, "content": message})
+
+    def clear_chat_history(self):
+        agent = self.loaded_agent.get("agent")
+        if agent:
+            agent.chat_history = []
 
     def _schedule_unload(self):
         if self.unload_timer:
             self.unload_timer.cancel()
 
-        self.unload_timer = Timer(3600, self.unload_model)
+        self.unload_timer = Timer(3600, self.unload_agent)
         self.unload_timer.start()
 
 

@@ -105,6 +105,11 @@ class UIManager:
         self.image_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         top_layout.addLayout(self.image_layout)
 
+        # Add file layout
+        self.file_layout = QHBoxLayout()
+        self.file_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        top_layout.addLayout(self.file_layout)
+
         button_layout = QHBoxLayout()
         button_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.summarize_button = QPushButton("Summarize", self.parent)

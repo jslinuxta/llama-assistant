@@ -117,6 +117,10 @@ llama_assistant_dir = home_dir / "llama_assistant"
 pathlib.Path.mkdir(llama_assistant_dir, parents=True, exist_ok=True)
 custom_models_file = llama_assistant_dir / "custom_models.json"
 settings_file = llama_assistant_dir / "settings.json"
+document_icon = "llama_assistant/resources/document_icon.png"
+
+# for RAG pipeline
+embed_model_name = "BAAI/bge-base-en-v1.5"
 
 if custom_models_file.exists():
     with open(custom_models_file, "r") as f:

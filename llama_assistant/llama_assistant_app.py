@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
     QLabel,
+    QWidget,
+    QVBoxLayout,
     QMessageBox,
     QSystemTrayIcon,
 )
@@ -24,6 +26,7 @@ from PyQt5.QtGui import (
     QDropEvent,
     QBitmap,
     QTextCursor,
+    QFont,
 )
 
 from llama_assistant import config
@@ -47,6 +50,8 @@ class LlamaAssistant(QMainWindow):
         self.setup_global_shortcut()
         self.last_response = ""
         self.dropped_image = None
+        self.dropped_files = set()
+        self.file_containers = dict()
         self.speech_thread = None
         self.is_listening = False
         self.image_label = None
@@ -168,16 +173,22 @@ class LlamaAssistant(QMainWindow):
         if message == "cls" or message == "clear":
             self.clear_chat()
             self.remove_image_thumbnail()
+            self.dropped_image = None
+
+            for file_path in self.dropped_files:
+                self.remove_file_thumbnail(self.file_containers[file_path], file_path)
+            
             return
 
         self.last_response = ""
 
         if self.dropped_image:
-            self.process_image_with_prompt(self.dropped_image, message)
+            self.process_image_with_prompt(self.dropped_image, self.dropped_files, message)
             self.dropped_image = None
             self.remove_image_thumbnail()
         else:
-            QTimer.singleShot(100, lambda: self.process_text(message, "chat"))
+            QTimer.singleShot(100, lambda: self.process_text(message, self.dropped_files, "chat"))
+
 
     def on_task_button_clicked(self):
         button = self.sender()
@@ -185,9 +196,9 @@ class LlamaAssistant(QMainWindow):
         message = self.ui_manager.input_field.toPlainText()
         if message == "":
             return
-        self.process_text(message, task)
+        self.process_text(message, self.dropped_files, task)
 
-    def process_text(self, message, task="chat"):
+    def process_text(self, message, file_paths, task="chat"):
         if task != "chat":
             self.clear_chat()
         self.show_chat_box()
@@ -207,12 +218,12 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>You:</b></span> {message}')
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>AI ({task}):</b></span> ')
 
-        self.processing_thread = ProcessingThread(self.current_text_model, prompt)
+        self.processing_thread = ProcessingThread(self.current_text_model, prompt, lookup_files=file_paths)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
 
-    def process_image_with_prompt(self, image_path, prompt):
+    def process_image_with_prompt(self, image_path, file_paths, prompt):
         self.show_chat_box()
         self.ui_manager.chat_box.append(
             f'<span style="color: #aaa;"><b>You:</b></span> [Uploaded an image: {image_path}]'
@@ -222,7 +233,7 @@ class LlamaAssistant(QMainWindow):
 
         image = image_to_base64_data_uri(image_path)
         self.processing_thread = ProcessingThread(
-            self.current_multimodal_model, prompt, image=image
+            self.current_multimodal_model, prompt, image=image, lookup_files=file_paths
         )
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
@@ -266,6 +277,7 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.input_field.setFocus()
         self.ui_manager.copy_button.hide()
         self.ui_manager.clear_button.hide()
+        self.processing_thread.clear_chat_history()
         self.setFixedHeight(400)  # Reset to default height
 
     def dragEnterEvent(self, event: QDragEnterEvent):
@@ -277,11 +289,26 @@ class LlamaAssistant(QMainWindow):
     def dropEvent(self, event: QDropEvent):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         for file_path in files:
+            print(f"File dropped: {file_path}")
             if file_path.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp")):
                 self.dropped_image = file_path
                 self.ui_manager.input_field.setPlaceholderText("Enter a prompt for the image...")
                 self.show_image_thumbnail(file_path)
-                break
+            elif file_path.lower().endswith((".pdf", "doc", ".docx", ".txt", "ppt", ".pptx", ".xls", ".xlsx")):
+                if file_path not in self.dropped_files:
+                    self.dropped_files.add(file_path)
+                    self.ui_manager.input_field.setPlaceholderText("Enter a prompt for the document...")
+                    self.show_file_thumbnail(file_path)
+                else:
+                    print(f"File {file_path} already added")
+                
+
+    def remove_file_thumbnail(self, file_label, file_path):
+        file_label.setParent(None)
+        self.setFixedHeight(self.height() - 110)  # Decrease height after removing file
+        # Remove the file from the list
+        self.dropped_files.remove(file_path)
+        del self.file_containers[file_path]
 
     def show_image_thumbnail(self, image_path):
         if self.image_label is None:
@@ -345,6 +372,82 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.image_layout.addWidget(self.image_label)
         self.setFixedHeight(self.height() + 110)  # Increase height to accommodate larger image
 
+    def show_file_thumbnail(self, file_path):
+        # Create a container widget
+        container = QWidget(self)
+        container.setFixedSize(80, 100)  # Adjust height to accommodate both pixmap and text
+
+        # Create a layout for the container
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Create a QLabel for the pixmap
+        pixmap_label = QLabel(container)
+        pixmap_label.setFixedSize(80, 80)
+        pixmap_label.setStyleSheet("background-color: transparent;")
+
+        # Create a QLabel for the text
+        text_label = QLabel(file_path.split("/")[-1], container)
+        # set text background color to white, text size to 5px 
+        #  and rounded corners, vertical alignment to top
+        text_label.setStyleSheet(
+            """
+            background-color: black;
+            color: white;
+            border-radius: 5px;
+            font-size: 8px;
+            padding: 2px;
+            """
+        )
+        text_label.setWordWrap(True)
+        text_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # Add the labels to the layout
+        layout.addWidget(pixmap_label)
+        layout.addWidget(text_label)
+
+        # Create the remove button
+        remove_button = QPushButton("x", pixmap_label)
+        remove_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: rgba(50, 50, 50, 200);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                padding: 2px;
+                width: 16px;
+                height: 16px;
+            }
+            QPushButton:hover {
+                background-color: rgba(50, 50, 50, 230);
+            }
+            """
+        )
+        remove_button.move(60, 0)
+        remove_button.clicked.connect(lambda: self.remove_file_thumbnail(container, file_path))
+
+        # Load and set the pixmap
+        import os
+        print("Icon path:", str(config.document_icon), os.path.exists(str(config.document_icon)))
+        pixmap = QPixmap(str(config.document_icon))
+        scaled_pixmap = pixmap.scaled(
+            80,
+            80,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        pixmap_label.setPixmap(scaled_pixmap)
+
+        # Add the container to the layout
+        self.ui_manager.file_layout.addWidget(container)
+
+        self.setFixedHeight(self.height() + 110)  # Increase height to accommodate larger file
+
+        self.file_containers[file_path] = container
+    
     def remove_image_thumbnail(self):
         if self.image_label:
             self.image_label.setParent(None)
