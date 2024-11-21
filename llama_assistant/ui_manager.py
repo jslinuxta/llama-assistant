@@ -35,7 +35,7 @@ class UIManager:
 
     def init_ui(self):
         self.parent.setWindowTitle("AI Assistant")
-        self.parent.setMinimumSize(600, 500)
+        self.parent.setMinimumSize(600, 700)
         self.parent.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint
         )
@@ -152,16 +152,15 @@ class UIManager:
         main_layout.addLayout(result_layout)
 
         self.scroll_area = QScrollArea(self.parent)
-        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidgetResizable(True)  # Allow the widget inside to resize
+        self.scroll_area.setMinimumHeight(400) 
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setMinimumHeight(400)
         self.scroll_area.setStyleSheet(
             """
             QScrollArea {
                 border: none;
                 background-color: transparent;
                 border-radius: 20px;
-                min-height: 400px;
             }
             QScrollBar:vertical {
                 border: none;
@@ -175,13 +174,8 @@ class UIManager:
                 min-height: 20px;
                 border-radius: 5px;
             }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                border: none;
-                background: none;
-            }
             """
         )
-        self.scroll_area.hide()
 
         self.chat_box = QTextBrowser(self.scroll_area)
         self.chat_box.setOpenExternalLinks(True)
@@ -191,14 +185,15 @@ class UIManager:
                 border: none;
                 background-color: transparent;
                 border-radius: 15px;
-                padding: 10px;
+                padding: 10px;  # Adjust padding as needed
             }
-            QTextBrowser::viewport {
-                border-radius: 15px;
-            }
-        """
+            """
         )
+
         self.scroll_area.setWidget(self.chat_box)
+        self.scroll_area.hide()  # Hide the scroll area initially
+        
+        # Ensure the scroll area can expand fully in the layout
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(self.scroll_area)
 

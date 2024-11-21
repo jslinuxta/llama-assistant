@@ -258,7 +258,8 @@ class LlamaAssistant(QMainWindow):
             self.ui_manager.scroll_area.show()
             self.ui_manager.copy_button.show()
             self.ui_manager.clear_button.show()
-            self.setFixedHeight(500)  # Increase this value if needed
+            self.setFixedHeight(700)  # Increase this value if needed
+
         self.ui_manager.chat_box.verticalScrollBar().setValue(
             self.ui_manager.chat_box.verticalScrollBar().maximum()
         )
