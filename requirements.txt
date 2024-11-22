@@ -11,4 +11,5 @@ ffmpeg-python==0.2.0
 llama-index-core==0.12.0
 llama-index-embeddings-huggingface==0.4.0
 docx2txt==0.8
+mistune==3.0.2
 git+https://github.com/stlukey/whispercpp.py

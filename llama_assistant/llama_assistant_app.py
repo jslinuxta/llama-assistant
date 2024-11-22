@@ -2,8 +2,6 @@ import json
 import copy
 import time
 import traceback
-import markdown
-import pypandoc
 import mistune
 
 from PyQt5.QtWidgets import (
