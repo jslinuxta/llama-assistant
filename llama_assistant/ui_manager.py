@@ -30,7 +30,7 @@ class CustomQTextBrowser(QTextBrowser):
     def __init__(self, parent):
         super().__init__(parent)
         
-        # Apply stylesheet specific to this QTextBrowser
+        # Apply stylesheet specific to generated text content
         self.document().setDefaultStyleSheet("""
             p {
                 color: #FFFFFF;
@@ -203,16 +203,6 @@ class UIManager:
 
         self.chat_box = CustomQTextBrowser(self.scroll_area)
         self.chat_box.setOpenExternalLinks(True)
-        self.chat_box.setStyleSheet(
-            """
-            QTextBrowser {
-                border: none;
-                background-color: transparent;
-                border-radius: 15px;
-                padding: 10px;  # Adjust padding as needed
-            }
-            """
-        )
 
         self.scroll_area.setWidget(self.chat_box)
         self.scroll_area.hide()  # Hide the scroll area initially
