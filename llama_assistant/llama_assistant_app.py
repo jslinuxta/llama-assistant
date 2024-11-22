@@ -3,6 +3,8 @@ import copy
 import time
 import traceback
 import markdown
+import pypandoc
+import mistune
 
 from PyQt5.QtWidgets import (
     QApplication,
@@ -58,7 +60,7 @@ class LlamaAssistant(QMainWindow):
         self.current_text_model = self.settings.get("text_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
         self.processing_thread = None
-        self.response_start_position = 0
+        self.markdown_creator = mistune.create_markdown()
 
     def tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
@@ -218,6 +220,8 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>You:</b></span> {message}')
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>AI ({task}):</b></span> ')
 
+        self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
+
         self.processing_thread = ProcessingThread(self.current_text_model, prompt, lookup_files=file_paths)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
@@ -231,6 +235,9 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>You:</b></span> {prompt}')
         self.ui_manager.chat_box.append('<span style="color: #aaa;"><b>AI:</b></span> ')
 
+        self.ui_manager.chat_box.moveCursor(QTextCursor.End)
+        self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
+
         image = image_to_base64_data_uri(image_path)
         self.processing_thread = ProcessingThread(
             self.current_multimodal_model, prompt, image=image, lookup_files=file_paths
@@ -240,18 +247,25 @@ class LlamaAssistant(QMainWindow):
         self.processing_thread.start()
 
     def update_chat_box(self, text):
+        self.last_response += text
+        markdown_response = self.markdown_creator(self.last_response)
+        # Since cannot change the font size of the h1, h2 tag, we will replace it with h3
+        markdown_response = markdown_response.replace("<h1>", "<h3>").replace("</h1>", "</h3>")
+        markdown_response = markdown_response.replace("<h2>", "<h3>").replace("</h2>", "</h3>")
+        markdown_response += "<div></div>"
         cursor = self.ui_manager.chat_box.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        self.ui_manager.chat_box.setTextCursor(cursor)
-        cursor.insertText(text)
+        cursor.setPosition(self.start_cursor_pos) # regenerate the updated text from the start position
+        # Select all text from the start_pos to the end
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        # Remove the selected text
+        cursor.removeSelectedText()
+        cursor.insertHtml(markdown_response)
         self.ui_manager.chat_box.verticalScrollBar().setValue(
             self.ui_manager.chat_box.verticalScrollBar().maximum()
         )
-        self.last_response += text
 
     def on_processing_finished(self):
-        self.response_start_position = 0
-        self.ui_manager.chat_box.append("")
+        self.ui_manager.chat_box.textCursor().movePosition(QTextCursor.End)
 
     def show_chat_box(self):
         if self.ui_manager.scroll_area.isHidden():

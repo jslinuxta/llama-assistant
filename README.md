@@ -53,7 +53,7 @@ https://github.com/user-attachments/assets/af2c544b-6d46-4c44-87d8-9a051ba213db
 - [x] 🖼️ Support 5 other multimodal models.
 - [x] ⚡ Streaming support for response.
 - [x] 🎙️ Add offline STT support: WhisperCPP.
-- [ ] 🧠 Knowledge database: Langchain or LlamaIndex?.
+- [x] 🧠 Knowledge database: LlamaIndex
 - [ ] 🔌 Plugin system for extensibility.
 - [ ] 📰 News and weather updates.
 - [ ] 📧 Email integration with Gmail and Outlook.

@@ -26,6 +26,30 @@ from llama_assistant.icons import (
     microphone_icon_svg,
 )
 
+class CustomQTextBrowser(QTextBrowser):
+    def __init__(self, parent):
+        super().__init__(parent)
+        
+        # Apply stylesheet specific to this QTextBrowser
+        self.document().setDefaultStyleSheet("""
+            p {
+                color: #FFFFFF;
+                font-size: 16px;
+                line-height: 1.3; 
+            }
+            li {
+                line-height: 1.3;
+            }
+            pre {
+                color: #FFFFFF;
+                background-color: #4A4949;
+                border: 1px solid #686763;
+                border-radius: 10px;
+                font-size: 15px;
+                font-family: Consolas, "Courier New", monospace;
+                overflow: hidden;
+            }
+        """)
 
 class UIManager:
     def __init__(self, parent):
@@ -177,7 +201,7 @@ class UIManager:
             """
         )
 
-        self.chat_box = QTextBrowser(self.scroll_area)
+        self.chat_box = CustomQTextBrowser(self.scroll_area)
         self.chat_box.setOpenExternalLinks(True)
         self.chat_box.setStyleSheet(
             """
