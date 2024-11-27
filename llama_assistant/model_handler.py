@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Dict, Set, Optional
 import time
 from threading import Timer
@@ -11,6 +12,7 @@ from llama_cpp.llama_chat_format import (
 
 from llama_assistant import config
 from llama_assistant.agent import RAGAgent
+
 
 class Model:
     def __init__(
@@ -54,19 +56,21 @@ class ModelHandler:
         if self.current_model_id == model_id:
             self.unload_agent()
 
-    def load_agent(self, model_id: str) -> Optional[Dict]:
+    def load_agent(self, model_id: str, generation_setting, rag_setting: Dict) -> Optional[Dict]:
         self.refresh_supported_models()
         if self.current_model_id == model_id and self.loaded_agent:
-            return self.loaded_agent
+            if generation_setting["context_len"] == self.loaded_agent["model"].context_params.n_ctx:
+                self.loaded_agent["agent"].update_rag_setting(rag_setting)
+                self.loaded_agent["agent"].update_generation_setting(generation_setting)
+                return self.loaded_agent
 
+        # if no model is loaded or different model is loaded, or context_len is different, reinitialize the agent
         self.unload_agent()  # Unload the current model if any
 
         model = next((m for m in self.supported_models if m.model_id == model_id), None)
         if not model:
             print(f"Model with ID {model_id} not found.")
             return None
-        
-        print('Load agent =========')
 
         if model.is_online():
             if model.model_type == "text":
@@ -74,7 +78,7 @@ class ModelHandler:
                 loaded_model = Llama.from_pretrained(
                     repo_id=model.repo_id,
                     filename=model.filename,
-                    n_ctx=2048,
+                    n_ctx=generation_setting["context_len"],
                 )
             elif model.model_type == "image":
                 if "moondream2" in model.model_id:
@@ -86,7 +90,7 @@ class ModelHandler:
                         repo_id=model.repo_id,
                         filename=model.filename,
                         chat_handler=chat_handler,
-                        n_ctx=2048,
+                        n_ctx=generation_setting["context_len"],
                     )
                 elif "MiniCPM" in model.model_id:
                     chat_handler = MiniCPMv26ChatHandler.from_pretrained(
@@ -97,7 +101,7 @@ class ModelHandler:
                         repo_id=model.repo_id,
                         filename=model.filename,
                         chat_handler=chat_handler,
-                        n_ctx=2048,
+                        n_ctx=generation_setting["context_len"],
                     )
                 elif "llava-v1.5" in model.model_id:
                     chat_handler = Llava15ChatHandler.from_pretrained(
@@ -108,7 +112,7 @@ class ModelHandler:
                         repo_id=model.repo_id,
                         filename=model.filename,
                         chat_handler=chat_handler,
-                        n_ctx=2048,
+                        n_ctx=generation_setting["context_len"],
                     )
                 elif "llava-v1.6" in model.model_id:
                     chat_handler = Llava16ChatHandler.from_pretrained(
@@ -119,7 +123,7 @@ class ModelHandler:
                         repo_id=model.repo_id,
                         filename=model.filename,
                         chat_handler=chat_handler,
-                        n_ctx=2048,
+                        n_ctx=generation_setting["context_len"],
                     )
             else:
                 print(f"Unsupported model type: {model.model_type}")
@@ -129,19 +133,24 @@ class ModelHandler:
             print("load local model")
             loaded_model = Llama(model_path=model.model_path)
 
+        print("Intializing agent ...")
+
         agent = RAGAgent(
-            config.embed_model_name,
+            generation_setting,
+            rag_setting,
             llm=loaded_model,
         )
 
         self.loaded_agent = {
             "model": loaded_model,
             "agent": agent,
-            "last_used": time.time()
+            "generation_setting": generation_setting,
+            "rag_setting": rag_setting,
+            "last_used": time.time(),
         }
         self.current_model_id = model_id
         self._schedule_unload()
-        
+
         return self.loaded_agent
 
     def unload_agent(self):
@@ -153,20 +162,26 @@ class ModelHandler:
             self.unload_timer.cancel()
             self.unload_timer = None
 
-    async def run_agent(self, agent: RAGAgent, message: str, lookup_files: Set, image: str, stream: bool):
-        response = await agent.run(query_str=message, lookup_files=lookup_files, image=image, streaming=stream)
+    async def run_agent(
+        self, agent: RAGAgent, message: str, lookup_files: Set, image: str, stream: bool
+    ):
+        response = await agent.run(
+            query_str=message, lookup_files=lookup_files, image=image, streaming=stream
+        )
         return response
-    
+
     def chat_completion(
         self,
         model_id: str,
+        generation_setting: Dict,
+        rag_setting: Dict,
         message: str,
         image: Optional[str] = None,
-        lookup_files: Optional[Set[str] ] = set(),
+        lookup_files: Optional[Set[str]] = None,
         stream: bool = False,
     ) -> str:
         print("In chat_completion")
-        agent_data = self.load_agent(model_id)
+        agent_data = self.load_agent(model_id, generation_setting, rag_setting)
         agent = agent_data.get("agent")
         if not agent_data:
             return "Failed to load model"
@@ -174,24 +189,25 @@ class ModelHandler:
         agent_data["last_used"] = time.time()
         self._schedule_unload()
 
-        import asyncio
         try:
             loop = asyncio.get_running_loop()
-            response = loop.run_until_complete(self.run_agent(agent, message, lookup_files, image, stream))
+            response = loop.run_until_complete(
+                self.run_agent(agent, message, lookup_files, image, stream)
+            )
         except RuntimeError:  # no running event loop
             response = asyncio.run(self.run_agent(agent, message, lookup_files, image, stream))
-        
+
         return response
-    
+
     def update_chat_history(self, message: str, role: str):
         agent = self.loaded_agent.get("agent")
         if agent:
-            agent.chat_history.append({"role": role, "content": message})
+            agent.chat_history.add_message({"role": role, "content": message})
 
     def clear_chat_history(self):
         agent = self.loaded_agent.get("agent")
         if agent:
-            agent.chat_history = []
+            agent.chat_history.clear()
 
     def _schedule_unload(self):
         if self.unload_timer:

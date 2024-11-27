@@ -26,16 +26,18 @@ from llama_assistant.icons import (
     microphone_icon_svg,
 )
 
+
 class CustomQTextBrowser(QTextBrowser):
     def __init__(self, parent):
         super().__init__(parent)
-        
+
         # Apply stylesheet specific to generated text content
-        self.document().setDefaultStyleSheet("""
+        self.document().setDefaultStyleSheet(
+            """
             p {
                 color: #FFFFFF;
                 font-size: 16px;
-                line-height: 1.3; 
+                line-height: 1.3;
             }
             li {
                 line-height: 1.3;
@@ -49,7 +51,9 @@ class CustomQTextBrowser(QTextBrowser):
                 font-family: Consolas, "Courier New", monospace;
                 overflow: hidden;
             }
-        """)
+        """
+        )
+
 
 class UIManager:
     def __init__(self, parent):
@@ -177,7 +181,7 @@ class UIManager:
 
         self.scroll_area = QScrollArea(self.parent)
         self.scroll_area.setWidgetResizable(True)  # Allow the widget inside to resize
-        self.scroll_area.setMinimumHeight(400) 
+        self.scroll_area.setMinimumHeight(400)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setStyleSheet(
             """
@@ -206,7 +210,7 @@ class UIManager:
 
         self.scroll_area.setWidget(self.chat_box)
         self.scroll_area.hide()  # Hide the scroll area initially
-        
+
         # Ensure the scroll area can expand fully in the layout
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(self.scroll_area)

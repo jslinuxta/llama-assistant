@@ -97,6 +97,8 @@ class LlamaAssistant(QMainWindow):
             self.deinit_wake_word_detector()
         self.current_text_model = self.settings.get("text_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
+        self.generation_setting = self.settings.get("generation")
+        self.rag_setting = self.settings.get("rag")
 
     def setup_global_shortcut(self):
         try:
@@ -177,7 +179,7 @@ class LlamaAssistant(QMainWindow):
 
             for file_path in self.dropped_files:
                 self.remove_file_thumbnail(self.file_containers[file_path], file_path)
-            
+
             return
 
         self.last_response = ""
@@ -188,7 +190,6 @@ class LlamaAssistant(QMainWindow):
             self.remove_image_thumbnail()
         else:
             QTimer.singleShot(100, lambda: self.process_text(message, self.dropped_files, "chat"))
-
 
     def on_task_button_clicked(self):
         button = self.sender()
@@ -203,7 +204,7 @@ class LlamaAssistant(QMainWindow):
             self.clear_chat()
         self.show_chat_box()
         if task == "chat":
-            prompt = message + " \n" + "Generate a short and simple response."
+            prompt = message
         elif task == "Summarize":
             prompt = f"Summarize the following text: {message}"
         elif task == "Rephrase":
@@ -220,7 +221,13 @@ class LlamaAssistant(QMainWindow):
 
         self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
 
-        self.processing_thread = ProcessingThread(self.current_text_model, prompt, lookup_files=file_paths)
+        self.processing_thread = ProcessingThread(
+            self.current_text_model,
+            self.generation_setting,
+            self.rag_setting,
+            prompt,
+            lookup_files=file_paths,
+        )
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
@@ -238,7 +245,12 @@ class LlamaAssistant(QMainWindow):
 
         image = image_to_base64_data_uri(image_path)
         self.processing_thread = ProcessingThread(
-            self.current_multimodal_model, prompt, image=image, lookup_files=file_paths
+            self.current_multimodal_model,
+            self.generation_setting,
+            self.rag_setting,
+            prompt,
+            image=image,
+            lookup_files=file_paths,
         )
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
@@ -252,7 +264,9 @@ class LlamaAssistant(QMainWindow):
         markdown_response = markdown_response.replace("<h2>", "<h3>").replace("</h2>", "</h3>")
         markdown_response += "<div></div>"
         cursor = self.ui_manager.chat_box.textCursor()
-        cursor.setPosition(self.start_cursor_pos) # regenerate the updated text from the start position
+        cursor.setPosition(
+            self.start_cursor_pos
+        )  # regenerate the updated text from the start position
         # Select all text from the start_pos to the end
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
         # Remove the selected text
@@ -310,11 +324,12 @@ class LlamaAssistant(QMainWindow):
             elif file_path.lower().endswith((".pdf", "doc", ".docx", ".txt")):
                 if file_path not in self.dropped_files:
                     self.dropped_files.add(file_path)
-                    self.ui_manager.input_field.setPlaceholderText("Enter a prompt for the document...")
+                    self.ui_manager.input_field.setPlaceholderText(
+                        "Enter a prompt for the document..."
+                    )
                     self.show_file_thumbnail(file_path)
                 else:
                     print(f"File {file_path} already added")
-                
 
     def remove_file_thumbnail(self, file_label, file_path):
         file_label.setParent(None)
@@ -402,7 +417,7 @@ class LlamaAssistant(QMainWindow):
 
         # Create a QLabel for the text
         text_label = QLabel(file_path.split("/")[-1], container)
-        # set text background color to white, text size to 5px 
+        # set text background color to white, text size to 5px
         #  and rounded corners, vertical alignment to top
         text_label.setStyleSheet(
             """
@@ -444,6 +459,7 @@ class LlamaAssistant(QMainWindow):
 
         # Load and set the pixmap
         import os
+
         print("Icon path:", str(config.document_icon), os.path.exists(str(config.document_icon)))
         pixmap = QPixmap(str(config.document_icon))
         scaled_pixmap = pixmap.scaled(
@@ -460,7 +476,7 @@ class LlamaAssistant(QMainWindow):
         self.setFixedHeight(self.height() + 110)  # Increase height to accommodate larger file
 
         self.file_containers[file_path] = container
-    
+
     def remove_image_thumbnail(self):
         if self.image_label:
             self.image_label.setParent(None)
