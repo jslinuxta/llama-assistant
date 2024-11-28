@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Llama Assistant" style="width: 128px; max-width: 100%; height: auto;" src="https://raw.githubusercontent.com/vietanhdev/llama-assistant/refs/heads/main/logo.png"/>
+  <img alt="Llama Assistant" style="width: 128px; max-width: 100%; height: auto;" src="https://raw.githubusercontent.com/nrl-ai/llama-assistant/refs/heads/main/logo.png"/>
   <h1 align="center">🌟 Llama Assistant 🌟</h1>
   <p align="center">Local AI Assistant That Respects Your Privacy! 🔒</p>
 <p align="center"><b>Website:</b> <a href="https://llama-assistant.nrl.ai/" target="_blank">llama-assistant.nrl.ai</a></p>
@@ -11,9 +11,9 @@
 ![Llama 3](https://img.shields.io/badge/Llama-3-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 ![Version](https://img.shields.io/badge/version-0.1.0-red.svg)
-![Stars](https://img.shields.io/github/stars/vietanhdev/llama-assistant.svg)
-![Forks](https://img.shields.io/github/forks/vietanhdev/llama-assistant.svg)
-![Issues](https://img.shields.io/github/issues/vietanhdev/llama-assistant.svg)
+![Stars](https://img.shields.io/github/stars/nrl-ai/llama-assistant.svg)
+![Forks](https://img.shields.io/github/forks/nrl-ai/llama-assistant.svg)
+![Issues](https://img.shields.io/github/issues/nrl-ai/llama-assistant.svg)
 [![Downloads](https://static.pepy.tech/badge/llama-assistant)](https://pepy.tech/project/llama-assistant)
 [![Downloads](https://static.pepy.tech/badge/llama-assistant/month)](https://pepy.tech/project/llama-assistant)
 
@@ -23,11 +23,11 @@ AI-powered assistant to help you with your daily tasks, powered by Llama 3.2. It
 
 This assistant can run offline on your local machine, and it respects your privacy by not sending any data to external servers.
 
-[![Screenshot](https://raw.githubusercontent.com/vietanhdev/llama-assistant/refs/heads/main/screenshot.png)](https://www.youtube.com/watch?v=kyRf8maKuDc)
+[![Screenshot](https://raw.githubusercontent.com/nrl-ai/llama-assistant/refs/heads/main/screenshot.png)](https://www.youtube.com/watch?v=kyRf8maKuDc)
 
 https://github.com/user-attachments/assets/af2c544b-6d46-4c44-87d8-9a051ba213db
 
-![Settings](https://raw.githubusercontent.com/vietanhdev/llama-assistant/refs/heads/main/docs/custom-models.png)
+![Settings](https://raw.githubusercontent.com/nrl-ai/llama-assistant/refs/heads/main/docs/custom-models.png)
 
 ## Supported Models
 
@@ -144,7 +144,7 @@ pip install llama-assistant
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/vietanhdev/llama-assistant.git
+git clone https://github.com/nrl-ai/llama-assistant.git
 cd llama-assistant
 ```
 
@@ -220,9 +220,9 @@ This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) fi
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=vietanhdev/llama-assistant&type=Date)](https://star-history.com/#vietanhdev/llama-assistant&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=nrl-ai/llama-assistant&type=Date)](https://star-history.com/#nrl-ai/llama-assistant&Date)
 
 ## Contact
 
-- Viet-Anh Nguyen - [vietanhdev](https://github.com/vietanhdev), [contact form](https://www.vietanh.dev/contact).
-- Project Link: [https://github.com/vietanhdev/llama-assistant](https://github.com/vietanhdev/llama-assistant), [https://llama-assistant.nrl.ai/](https://llama-assistant.nrl.ai/).
+- **Website:** [https://llama-assistant.nrl.ai/](https://llama-assistant.nrl.ai/).
+- **Contact Form:** [https://www.nrl.ai/contact](https://www.nrl.ai/contact).
