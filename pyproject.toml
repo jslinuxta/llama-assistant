@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
+    "numpy",
     "ffmpeg-python",
     "PyQt5",
     "markdown",
@@ -34,6 +35,11 @@ dependencies = [
     "huggingface_hub",
     "openwakeword",
     "whispercpp",
+    "llama-index-core",
+    "llama-index-readers-file",
+    "llama-index-embeddings-huggingface",
+    "docx2txt",
+    "mistune"
 ]
 dynamic = []
 

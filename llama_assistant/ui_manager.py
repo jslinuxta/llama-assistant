@@ -27,6 +27,34 @@ from llama_assistant.icons import (
 )
 
 
+class CustomQTextBrowser(QTextBrowser):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        # Apply stylesheet specific to generated text content
+        self.document().setDefaultStyleSheet(
+            """
+            p {
+                color: #FFFFFF;
+                font-size: 16px;
+                line-height: 1.3;
+            }
+            li {
+                line-height: 1.3;
+            }
+            pre {
+                color: #FFFFFF;
+                background-color: #4A4949;
+                border: 1px solid #686763;
+                border-radius: 10px;
+                font-size: 15px;
+                font-family: Consolas, "Courier New", monospace;
+                overflow: hidden;
+            }
+        """
+        )
+
+
 class UIManager:
     def __init__(self, parent):
         self.parent = parent
@@ -35,7 +63,7 @@ class UIManager:
 
     def init_ui(self):
         self.parent.setWindowTitle("AI Assistant")
-        self.parent.setMinimumSize(600, 500)
+        self.parent.setMinimumSize(600, 700)
         self.parent.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint
         )
@@ -105,6 +133,11 @@ class UIManager:
         self.image_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         top_layout.addLayout(self.image_layout)
 
+        # Add file layout
+        self.file_layout = QHBoxLayout()
+        self.file_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        top_layout.addLayout(self.file_layout)
+
         button_layout = QHBoxLayout()
         button_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.summarize_button = QPushButton("Summarize", self.parent)
@@ -147,16 +180,15 @@ class UIManager:
         main_layout.addLayout(result_layout)
 
         self.scroll_area = QScrollArea(self.parent)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setWidgetResizable(True)  # Allow the widget inside to resize
         self.scroll_area.setMinimumHeight(400)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setStyleSheet(
             """
             QScrollArea {
                 border: none;
                 background-color: transparent;
                 border-radius: 20px;
-                min-height: 400px;
             }
             QScrollBar:vertical {
                 border: none;
@@ -170,30 +202,16 @@ class UIManager:
                 min-height: 20px;
                 border-radius: 5px;
             }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                border: none;
-                background: none;
-            }
             """
         )
-        self.scroll_area.hide()
 
-        self.chat_box = QTextBrowser(self.scroll_area)
+        self.chat_box = CustomQTextBrowser(self.scroll_area)
         self.chat_box.setOpenExternalLinks(True)
-        self.chat_box.setStyleSheet(
-            """
-            QTextBrowser {
-                border: none;
-                background-color: transparent;
-                border-radius: 15px;
-                padding: 10px;
-            }
-            QTextBrowser::viewport {
-                border-radius: 15px;
-            }
-        """
-        )
+
         self.scroll_area.setWidget(self.chat_box)
+        self.scroll_area.hide()  # Hide the scroll area initially
+
+        # Ensure the scroll area can expand fully in the layout
         self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         main_layout.addWidget(self.scroll_area)
 

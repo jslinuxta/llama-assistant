@@ -44,6 +44,8 @@ class SettingsDialog(QDialog):
         # Voice Activation Settings Group
         self.create_voice_activation_settings_group()
 
+        self.create_rag_settings_group()
+
         # Create a horizontal layout for the save button
         button_layout = QHBoxLayout()
         self.save_button = QPushButton("Save")
@@ -122,6 +124,34 @@ class SettingsDialog(QDialog):
         multimodal_model_layout.addStretch()
         layout.addLayout(multimodal_model_layout)
 
+        context_len_layout = QHBoxLayout()
+        context_len_label = QLabel("Context Length:")
+        self.context_len_input = QLineEdit()
+        context_len_layout.addWidget(context_len_label)
+        context_len_layout.addWidget(self.context_len_input)
+        layout.addLayout(context_len_layout)
+
+        temperature_layout = QHBoxLayout()
+        temperature_label = QLabel("Temperature:")
+        self.temperature_input = QLineEdit()
+        temperature_layout.addWidget(temperature_label)
+        temperature_layout.addWidget(self.temperature_input)
+        layout.addLayout(temperature_layout)
+
+        top_p_layout = QHBoxLayout()
+        top_p_label = QLabel("Top p:")
+        self.top_p_input = QLineEdit()
+        top_p_layout.addWidget(top_p_label)
+        top_p_layout.addWidget(self.top_p_input)
+        layout.addLayout(top_p_layout)
+
+        top_k_layout = QHBoxLayout()
+        top_k_label = QLabel("Top k:")
+        self.top_k_input = QLineEdit()
+        top_k_layout.addWidget(top_k_label)
+        top_k_layout.addWidget(self.top_k_input)
+        layout.addLayout(top_k_layout)
+
         self.manage_custom_models_button = QPushButton("Manage Custom Models")
         self.manage_custom_models_button.clicked.connect(self.open_custom_models_dialog)
         layout.addWidget(self.manage_custom_models_button)
@@ -139,6 +169,48 @@ class SettingsDialog(QDialog):
 
         self.hey_llama_mic_checkbox = QCheckBox('Say "Hey Llama" to activate microphone')
         layout.addWidget(self.hey_llama_mic_checkbox)
+
+        group_box.setLayout(layout)
+        self.main_layout.addWidget(group_box)
+
+    def create_rag_settings_group(self):
+        group_box = QGroupBox("RAG Settings")
+        layout = QVBoxLayout()
+
+        embed_model_layout = QHBoxLayout()
+        embed_model_label = QLabel("Embed Model Name:")
+        self.embed_model_input = QLineEdit()
+        embed_model_layout.addWidget(embed_model_label)
+        embed_model_layout.addWidget(self.embed_model_input)
+        layout.addLayout(embed_model_layout)
+
+        chunk_size_layout = QHBoxLayout()
+        chunk_size_label = QLabel("Chunk Size:")
+        self.chunk_size_input = QLineEdit()
+        chunk_size_layout.addWidget(chunk_size_label)
+        chunk_size_layout.addWidget(self.chunk_size_input)
+        layout.addLayout(chunk_size_layout)
+
+        chunk_overlap_layout = QHBoxLayout()
+        chunk_overlap_label = QLabel("Chunk Overlap:")
+        self.chunk_overlap_input = QLineEdit()
+        chunk_overlap_layout.addWidget(chunk_overlap_label)
+        chunk_overlap_layout.addWidget(self.chunk_overlap_input)
+        layout.addLayout(chunk_overlap_layout)
+
+        max_retrieval_top_k_layout = QHBoxLayout()
+        max_retrieval_top_k_label = QLabel("Max Retrieval Top k:")
+        self.max_retrieval_top_k_input = QLineEdit()
+        max_retrieval_top_k_layout.addWidget(max_retrieval_top_k_label)
+        max_retrieval_top_k_layout.addWidget(self.max_retrieval_top_k_input)
+        layout.addLayout(max_retrieval_top_k_layout)
+
+        similarity_threshold_layout = QHBoxLayout()
+        similarity_threshold_label = QLabel("Similarity Threshold:")
+        self.similarity_threshold_input = QLineEdit()
+        similarity_threshold_layout.addWidget(similarity_threshold_label)
+        similarity_threshold_layout.addWidget(self.similarity_threshold_input)
+        layout.addLayout(similarity_threshold_layout)
 
         group_box.setLayout(layout)
         self.main_layout.addWidget(group_box)
@@ -186,6 +258,33 @@ class SettingsDialog(QDialog):
             self.hey_llama_chat_checkbox.setChecked(settings.get("hey_llama_chat", False))
             self.hey_llama_mic_checkbox.setChecked(settings.get("hey_llama_mic", False))
             self.update_hey_llama_mic_state(settings.get("hey_llama_chat", False))
+
+            # Load new settings
+            if "generation" not in settings:
+                settings["generation"] = {}
+            if "rag" not in settings:
+                settings["rag"] = {}
+            self.embed_model_input.setText(
+                settings["rag"].get("embed_model_name", config.embed_model_name)
+            )
+            self.chunk_size_input.setText(str(settings["rag"].get("chunk_size", config.chunk_size)))
+            self.chunk_overlap_input.setText(
+                str(settings["rag"].get("chunk_overlap", config.chunk_overlap))
+            )
+            self.max_retrieval_top_k_input.setText(
+                str(settings["rag"].get("max_retrieval_top_k", config.max_retrieval_top_k))
+            )
+            self.similarity_threshold_input.setText(
+                str(settings["rag"].get("similarity_threshold", config.similarity_threshold))
+            )
+            self.context_len_input.setText(
+                str(settings["generation"].get("context_len", config.context_len))
+            )
+            self.temperature_input.setText(
+                str(settings["generation"].get("temperature", config.temperature))
+            )
+            self.top_p_input.setText(str(settings["generation"].get("top_p", config.top_p)))
+            self.top_k_input.setText(str(settings["generation"].get("top_k", config.top_k)))
         else:
             self.color = QColor("#1E1E1E")
             self.shortcut_recorder.setText("<cmd>+<shift>+<space>")
@@ -199,6 +298,19 @@ class SettingsDialog(QDialog):
             "multimodal_model": self.multimodal_model_combo.currentText(),
             "hey_llama_chat": self.hey_llama_chat_checkbox.isChecked(),
             "hey_llama_mic": self.hey_llama_mic_checkbox.isChecked(),
+            "generation": {
+                "context_len": int(self.context_len_input.text()),
+                "temperature": float(self.temperature_input.text()),
+                "top_p": float(self.top_p_input.text()),
+                "top_k": int(self.top_k_input.text()),
+            },
+            "rag": {
+                "embed_model_name": self.embed_model_input.text(),
+                "chunk_size": int(self.chunk_size_input.text()),
+                "chunk_overlap": int(self.chunk_overlap_input.text()),
+                "max_retrieval_top_k": int(self.max_retrieval_top_k_input.text()),
+                "similarity_threshold": float(self.similarity_threshold_input.text()),
+            },
         }
 
     def save_settings(self, settings=None):

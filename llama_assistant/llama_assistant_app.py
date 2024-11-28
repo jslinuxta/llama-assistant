@@ -2,13 +2,15 @@ import json
 import copy
 import time
 import traceback
-import markdown
+import mistune
 
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
     QPushButton,
     QLabel,
+    QWidget,
+    QVBoxLayout,
     QMessageBox,
     QSystemTrayIcon,
 )
@@ -24,6 +26,7 @@ from PyQt5.QtGui import (
     QDropEvent,
     QBitmap,
     QTextCursor,
+    QFont,
 )
 
 from llama_assistant import config
@@ -47,13 +50,15 @@ class LlamaAssistant(QMainWindow):
         self.setup_global_shortcut()
         self.last_response = ""
         self.dropped_image = None
+        self.dropped_files = set()
+        self.file_containers = dict()
         self.speech_thread = None
         self.is_listening = False
         self.image_label = None
         self.current_text_model = self.settings.get("text_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
         self.processing_thread = None
-        self.response_start_position = 0
+        self.markdown_creator = mistune.create_markdown()
 
     def tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
@@ -92,6 +97,8 @@ class LlamaAssistant(QMainWindow):
             self.deinit_wake_word_detector()
         self.current_text_model = self.settings.get("text_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
+        self.generation_setting = self.settings.get("generation")
+        self.rag_setting = self.settings.get("rag")
 
     def setup_global_shortcut(self):
         try:
@@ -168,16 +175,21 @@ class LlamaAssistant(QMainWindow):
         if message == "cls" or message == "clear":
             self.clear_chat()
             self.remove_image_thumbnail()
+            self.dropped_image = None
+
+            for file_path in self.dropped_files:
+                self.remove_file_thumbnail(self.file_containers[file_path], file_path)
+
             return
 
         self.last_response = ""
 
         if self.dropped_image:
-            self.process_image_with_prompt(self.dropped_image, message)
+            self.process_image_with_prompt(self.dropped_image, self.dropped_files, message)
             self.dropped_image = None
             self.remove_image_thumbnail()
         else:
-            QTimer.singleShot(100, lambda: self.process_text(message, "chat"))
+            QTimer.singleShot(100, lambda: self.process_text(message, self.dropped_files, "chat"))
 
     def on_task_button_clicked(self):
         button = self.sender()
@@ -185,14 +197,14 @@ class LlamaAssistant(QMainWindow):
         message = self.ui_manager.input_field.toPlainText()
         if message == "":
             return
-        self.process_text(message, task)
+        self.process_text(message, self.dropped_files, task)
 
-    def process_text(self, message, task="chat"):
+    def process_text(self, message, file_paths, task="chat"):
         if task != "chat":
             self.clear_chat()
         self.show_chat_box()
         if task == "chat":
-            prompt = message + " \n" + "Generate a short and simple response."
+            prompt = message
         elif task == "Summarize":
             prompt = f"Summarize the following text: {message}"
         elif task == "Rephrase":
@@ -207,12 +219,22 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>You:</b></span> {message}')
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>AI ({task}):</b></span> ')
 
-        self.processing_thread = ProcessingThread(self.current_text_model, prompt)
+        self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
+
+        self.processing_thread = ProcessingThread(
+            self.current_text_model,
+            self.generation_setting,
+            self.rag_setting,
+            prompt,
+            lookup_files=file_paths,
+        )
+
+        self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
 
-    def process_image_with_prompt(self, image_path, prompt):
+    def process_image_with_prompt(self, image_path, file_paths, prompt):
         self.show_chat_box()
         self.ui_manager.chat_box.append(
             f'<span style="color: #aaa;"><b>You:</b></span> [Uploaded an image: {image_path}]'
@@ -220,34 +242,71 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.chat_box.append(f'<span style="color: #aaa;"><b>You:</b></span> {prompt}')
         self.ui_manager.chat_box.append('<span style="color: #aaa;"><b>AI:</b></span> ')
 
+        self.ui_manager.chat_box.moveCursor(QTextCursor.End)
+        self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
+
         image = image_to_base64_data_uri(image_path)
         self.processing_thread = ProcessingThread(
-            self.current_multimodal_model, prompt, image=image
+            self.current_multimodal_model,
+            self.generation_setting,
+            self.rag_setting,
+            prompt,
+            image=image,
+            lookup_files=file_paths,
         )
+        self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
 
+    def indicate_loading(self, message):
+        while self.processing_thread.is_preloading():
+            cursor = self.ui_manager.chat_box.textCursor()
+            cursor.setPosition(self.start_cursor_pos)
+            # Select all text from the start_pos to the end
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            # Remove the selected text
+            cursor.removeSelectedText()
+            # create animation where the characters are displayed one by one
+            for c in message:
+                if c == " ":
+                    cursor.insertText(" ")
+                else:
+                    cursor.insertHtml(f'<span style="color: #aaa;">{c}</span>')
+                QApplication.processEvents()  # Process events to update the UI
+                time.sleep(0.05)
+            time.sleep(0.5)
+
     def update_chat_box(self, text):
+        self.last_response += text
+        markdown_response = self.markdown_creator(self.last_response)
+        # Since cannot change the font size of the h1, h2 tag, we will replace it with h3
+        markdown_response = markdown_response.replace("<h1>", "<h3>").replace("</h1>", "</h3>")
+        markdown_response = markdown_response.replace("<h2>", "<h3>").replace("</h2>", "</h3>")
+        markdown_response += "<div></div>"
         cursor = self.ui_manager.chat_box.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        self.ui_manager.chat_box.setTextCursor(cursor)
-        cursor.insertText(text)
+        cursor.setPosition(
+            self.start_cursor_pos
+        )  # regenerate the updated text from the start position
+        # Select all text from the start_pos to the end
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        # Remove the selected text
+        cursor.removeSelectedText()
+        cursor.insertHtml(markdown_response)
         self.ui_manager.chat_box.verticalScrollBar().setValue(
             self.ui_manager.chat_box.verticalScrollBar().maximum()
         )
-        self.last_response += text
 
     def on_processing_finished(self):
-        self.response_start_position = 0
-        self.ui_manager.chat_box.append("")
+        self.ui_manager.chat_box.textCursor().movePosition(QTextCursor.End)
 
     def show_chat_box(self):
         if self.ui_manager.scroll_area.isHidden():
             self.ui_manager.scroll_area.show()
             self.ui_manager.copy_button.show()
             self.ui_manager.clear_button.show()
-            self.setFixedHeight(500)  # Increase this value if needed
+            self.setFixedHeight(700)  # Increase this value if needed
+
         self.ui_manager.chat_box.verticalScrollBar().setValue(
             self.ui_manager.chat_box.verticalScrollBar().maximum()
         )
@@ -266,6 +325,7 @@ class LlamaAssistant(QMainWindow):
         self.ui_manager.input_field.setFocus()
         self.ui_manager.copy_button.hide()
         self.ui_manager.clear_button.hide()
+        self.processing_thread.clear_chat_history()
         self.setFixedHeight(400)  # Reset to default height
 
     def dragEnterEvent(self, event: QDragEnterEvent):
@@ -277,11 +337,27 @@ class LlamaAssistant(QMainWindow):
     def dropEvent(self, event: QDropEvent):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         for file_path in files:
+            print(f"File dropped: {file_path}")
             if file_path.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp")):
                 self.dropped_image = file_path
                 self.ui_manager.input_field.setPlaceholderText("Enter a prompt for the image...")
                 self.show_image_thumbnail(file_path)
-                break
+            elif file_path.lower().endswith((".pdf", "doc", ".docx", ".txt")):
+                if file_path not in self.dropped_files:
+                    self.dropped_files.add(file_path)
+                    self.ui_manager.input_field.setPlaceholderText(
+                        "Enter a prompt for the document..."
+                    )
+                    self.show_file_thumbnail(file_path)
+                else:
+                    print(f"File {file_path} already added")
+
+    def remove_file_thumbnail(self, file_label, file_path):
+        file_label.setParent(None)
+        self.setFixedHeight(self.height() - 110)  # Decrease height after removing file
+        # Remove the file from the list
+        self.dropped_files.remove(file_path)
+        del self.file_containers[file_path]
 
     def show_image_thumbnail(self, image_path):
         if self.image_label is None:
@@ -344,6 +420,83 @@ class LlamaAssistant(QMainWindow):
         # Add new image to layout
         self.ui_manager.image_layout.addWidget(self.image_label)
         self.setFixedHeight(self.height() + 110)  # Increase height to accommodate larger image
+
+    def show_file_thumbnail(self, file_path):
+        # Create a container widget
+        container = QWidget(self)
+        container.setFixedSize(80, 100)  # Adjust height to accommodate both pixmap and text
+
+        # Create a layout for the container
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Create a QLabel for the pixmap
+        pixmap_label = QLabel(container)
+        pixmap_label.setFixedSize(80, 80)
+        pixmap_label.setStyleSheet("background-color: transparent;")
+
+        # Create a QLabel for the text
+        text_label = QLabel(file_path.split("/")[-1], container)
+        # set text background color to white, text size to 5px
+        #  and rounded corners, vertical alignment to top
+        text_label.setStyleSheet(
+            """
+            background-color: black;
+            color: white;
+            border-radius: 5px;
+            font-size: 8px;
+            padding: 2px;
+            """
+        )
+        text_label.setWordWrap(True)
+        text_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # Add the labels to the layout
+        layout.addWidget(pixmap_label)
+        layout.addWidget(text_label)
+
+        # Create the remove button
+        remove_button = QPushButton("x", pixmap_label)
+        remove_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: rgba(50, 50, 50, 200);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 12px;
+                padding: 2px;
+                width: 16px;
+                height: 16px;
+            }
+            QPushButton:hover {
+                background-color: rgba(50, 50, 50, 230);
+            }
+            """
+        )
+        remove_button.move(60, 0)
+        remove_button.clicked.connect(lambda: self.remove_file_thumbnail(container, file_path))
+
+        # Load and set the pixmap
+        import os
+
+        print("Icon path:", str(config.document_icon), os.path.exists(str(config.document_icon)))
+        pixmap = QPixmap(str(config.document_icon))
+        scaled_pixmap = pixmap.scaled(
+            80,
+            80,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        pixmap_label.setPixmap(scaled_pixmap)
+
+        # Add the container to the layout
+        self.ui_manager.file_layout.addWidget(container)
+
+        self.setFixedHeight(self.height() + 110)  # Increase height to accommodate larger file
+
+        self.file_containers[file_path] = container
 
     def remove_image_thumbnail(self):
         if self.image_label:

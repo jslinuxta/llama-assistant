@@ -111,12 +111,25 @@ DEFAULT_MODELS = [
     },
 ]
 
+# generation setting
+context_len = 2048
+top_k = 40
+top_p = 0.95
+temperature = 0.2
 
 home_dir = Path.home()
 llama_assistant_dir = home_dir / "llama_assistant"
 pathlib.Path.mkdir(llama_assistant_dir, parents=True, exist_ok=True)
 custom_models_file = llama_assistant_dir / "custom_models.json"
 settings_file = llama_assistant_dir / "settings.json"
+document_icon = "llama_assistant/resources/document_icon.png"
+
+# RAG setting
+embed_model_name = "BAAI/bge-base-en-v1.5"
+chunk_size = 256
+chunk_overlap = 128
+max_retrieval_top_k = 3
+similarity_threshold = 0.6
 
 if custom_models_file.exists():
     with open(custom_models_file, "r") as f:
