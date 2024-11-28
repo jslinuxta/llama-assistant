@@ -1,4 +1,4 @@
-from typing import List, Set, Optional, Dict
+from typing import List, Set, Optional, Dict, TYPE_CHECKING
 
 from llama_cpp import Llama
 from llama_index.core import VectorStoreIndex
@@ -86,7 +86,7 @@ class RAGAgent(Workflow):
         "Please write a response to the following question, using the above information if relevant:\n"
         "{query_str}\n"
     )
-    SYSTEM_PROMPT = {"role": "system", "content": "Generate short and simple response:"}
+    SYSTEM_PROMPT = {"role": "system", "content": "Generate short and simple response."}
 
     def __init__(
         self,
@@ -106,9 +106,9 @@ class RAGAgent(Workflow):
         self.retrieval_top_k = min(max(1, self.retrieval_top_k), rag_setting["max_retrieval_top_k"])
         self.search_index = None
         self.retriever = None
-        # 1 token ~ 3/4 words, so we multiply the context_len by 0.7 to get the max number of words
-        # why not 0.75? because we want to be a bit more conservative
-        self.chat_history = ChatHistory(max_history_size=self.context_len * 0.7)
+        # 1 token ~ 3/4 words, because the context length accounts for both input and output tokens
+        # we need to reserve some space for the output tokens (half-space for output tokens)
+        self.chat_history = ChatHistory(max_history_size=self.context_len * 0.75 * 1 / 2)
         self.lookup_files = set()
 
         self.embed_model = HuggingFaceEmbedding(model_name=rag_setting["embed_model_name"])

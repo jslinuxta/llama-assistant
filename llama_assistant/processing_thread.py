@@ -7,6 +7,7 @@ from llama_assistant.model_handler import handler as model_handler
 
 
 class ProcessingThread(QThread):
+    preloader_signal = pyqtSignal(str)
     update_signal = pyqtSignal(str)
     finished_signal = pyqtSignal()
 
@@ -26,6 +27,7 @@ class ProcessingThread(QThread):
         self.prompt = prompt
         self.image = image
         self.lookup_files = lookup_files
+        self.preloadong = False
 
     def run(self):
         output = model_handler.chat_completion(
@@ -36,6 +38,7 @@ class ProcessingThread(QThread):
             image=self.image,
             lookup_files=self.lookup_files,
             stream=True,
+            processing_thread=self,
         )
         full_response_str = ""
         for chunk in output:
@@ -52,3 +55,13 @@ class ProcessingThread(QThread):
     def clear_chat_history(self):
         model_handler.clear_chat_history()
         self.finished_signal.emit()
+
+    def emit_preloading_message(self, message: str):
+        self.preloader_signal.emit(message)
+
+    def set_preloading(self, preloading: bool, message: str):
+        self.preloading = preloading
+        self.emit_preloading_message(message)
+
+    def is_preloading(self):
+        return self.preloading

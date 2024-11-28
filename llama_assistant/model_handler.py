@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Dict, Set, Optional
+from typing import List, Dict, Set, Optional, TYPE_CHECKING
 import time
 from threading import Timer
 from llama_cpp import Llama
@@ -12,6 +12,9 @@ from llama_cpp.llama_chat_format import (
 
 from llama_assistant import config
 from llama_assistant.agent import RAGAgent
+
+if TYPE_CHECKING:
+    from llama_assistant.processing_thread import ProcessingThread
 
 
 class Model:
@@ -56,13 +59,21 @@ class ModelHandler:
         if self.current_model_id == model_id:
             self.unload_agent()
 
-    def load_agent(self, model_id: str, generation_setting, rag_setting: Dict) -> Optional[Dict]:
+    def load_agent(
+        self,
+        model_id: str,
+        generation_setting,
+        rag_setting: Dict,
+        processing_thread: "ProcessingThread",
+    ) -> Optional[Dict]:
         self.refresh_supported_models()
         if self.current_model_id == model_id and self.loaded_agent:
             if generation_setting["context_len"] == self.loaded_agent["model"].context_params.n_ctx:
                 self.loaded_agent["agent"].update_rag_setting(rag_setting)
                 self.loaded_agent["agent"].update_generation_setting(generation_setting)
                 return self.loaded_agent
+
+        processing_thread.set_preloading(True, "Loading model ....")
 
         # if no model is loaded or different model is loaded, or context_len is different, reinitialize the agent
         self.unload_agent()  # Unload the current model if any
@@ -133,7 +144,7 @@ class ModelHandler:
             print("load local model")
             loaded_model = Llama(model_path=model.model_path)
 
-        print("Intializing agent ...")
+        print("Initializing agent ...")
 
         agent = RAGAgent(
             generation_setting,
@@ -179,9 +190,9 @@ class ModelHandler:
         image: Optional[str] = None,
         lookup_files: Optional[Set[str]] = None,
         stream: bool = False,
+        processing_thread: "ProcessingThread" = None,
     ) -> str:
-        print("In chat_completion")
-        agent_data = self.load_agent(model_id, generation_setting, rag_setting)
+        agent_data = self.load_agent(model_id, generation_setting, rag_setting, processing_thread)
         agent = agent_data.get("agent")
         if not agent_data:
             return "Failed to load model"
@@ -189,6 +200,7 @@ class ModelHandler:
         agent_data["last_used"] = time.time()
         self._schedule_unload()
 
+        processing_thread.set_preloading(True, "Thinking ....")
         try:
             loop = asyncio.get_running_loop()
             response = loop.run_until_complete(
@@ -196,6 +208,8 @@ class ModelHandler:
             )
         except RuntimeError:  # no running event loop
             response = asyncio.run(self.run_agent(agent, message, lookup_files, image, stream))
+
+        processing_thread.set_preloading(False, "Thinking done.")
 
         return response
 

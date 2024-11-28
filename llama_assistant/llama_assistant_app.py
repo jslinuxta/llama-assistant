@@ -228,6 +228,8 @@ class LlamaAssistant(QMainWindow):
             prompt,
             lookup_files=file_paths,
         )
+
+        self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
@@ -252,9 +254,28 @@ class LlamaAssistant(QMainWindow):
             image=image,
             lookup_files=file_paths,
         )
+        self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
+
+    def indicate_loading(self, message):
+        while self.processing_thread.is_preloading():
+            cursor = self.ui_manager.chat_box.textCursor()
+            cursor.setPosition(self.start_cursor_pos)
+            # Select all text from the start_pos to the end
+            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+            # Remove the selected text
+            cursor.removeSelectedText()
+            # create animation where the characters are displayed one by one
+            for c in message:
+                if c == " ":
+                    cursor.insertText(" ")
+                else:
+                    cursor.insertHtml(f'<span style="color: #aaa;">{c}</span>')
+                QApplication.processEvents()  # Process events to update the UI
+                time.sleep(0.05)
+            time.sleep(0.5)
 
     def update_chat_box(self, text):
         self.last_response += text
