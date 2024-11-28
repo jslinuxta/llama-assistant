@@ -88,6 +88,11 @@ class LlamaAssistant(QMainWindow):
             self.settings["multimodal_model"] = self.settings.get(
                 "multimodal_model", config.DEFAULT_SETTINGS["multimodal_model"]
             )
+            # Update any missing keys from default settings
+            for key, default_value in config.DEFAULT_SETTINGS.items():
+                if key not in self.settings:
+                    self.settings[key] = default_value
+            self.save_settings()
         else:
             self.settings = copy.deepcopy(config.DEFAULT_SETTINGS)
             self.save_settings()

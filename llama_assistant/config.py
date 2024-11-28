@@ -11,6 +11,14 @@ DEFAULT_SETTINGS = {
     "multimodal_model": "vikhyatk/moondream2",
     "hey_llama_chat": False,
     "hey_llama_mic": False,
+    "generation": {"context_len": 2048, "top_k": 40, "top_p": 0.95, "temperature": 0.2},
+    "rag": {
+        "embed_model_name": "BAAI/bge-base-en-v1.5",
+        "chunk_size": 256,
+        "chunk_overlap": 128,
+        "max_retrieval_top_k": 3,
+        "similarity_threshold": 0.6,
+    },
 }
 DEFAULT_MODELS = [
     {
