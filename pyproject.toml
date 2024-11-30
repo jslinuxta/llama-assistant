@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llama-assistant"
-version = "0.1.39"
+version = "0.1.40"
 authors = [
     {name = "Viet-Anh Nguyen", email = "vietanh.dev@gmail.com"},
 ]
@@ -44,8 +44,8 @@ dependencies = [
 dynamic = []
 
 [project.urls]
-Homepage = "https://github.com/vietanhdev/llama-assistant"
-"Bug Tracker" = "https://github.com/vietanhdev/llama-assistant/issues"
+Homepage = "https://github.com/nrl-ai/llama-assistant"
+"Bug Tracker" = "https://github.com/nrl-ai/llama-assistant/issues"
 
 [project.scripts]
 llama-assistant = "llama_assistant.main:main"
