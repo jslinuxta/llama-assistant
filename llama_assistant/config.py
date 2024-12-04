@@ -11,7 +11,13 @@ DEFAULT_SETTINGS = {
     "multimodal_model": "vikhyatk/moondream2",
     "hey_llama_chat": False,
     "hey_llama_mic": False,
-    "generation": {"context_len": 2048, "top_k": 40, "top_p": 0.95, "temperature": 0.2},
+    "generation": {
+        "context_len": 2048, 
+        "max_output_tokens": 512,
+        "top_k": 40,
+        "top_p": 0.95,
+        "temperature": 0.2
+    },
     "rag": {
         "embed_model_name": "BAAI/bge-base-en-v1.5",
         "chunk_size": 256,
@@ -20,6 +26,25 @@ DEFAULT_SETTINGS = {
         "similarity_threshold": 0.6,
     },
 }
+
+VALIDATOR = {
+    'generation': {
+        'context_len': {'type': 'int', 'min': 2048},
+        'max_output_tokens': {'type': 'int', 'min': 1, 'max': 512},
+        'top_k': {'type': 'int', 'min': 1, 'max': 100},
+        'top_p': {'type': 'float', 'min': 0, 'max': 1},
+        'temperature': {'type': 'float', 'min': 0, 'max': 1},
+    },
+    'rag': {
+        'chunk_size': {'type': 'int', 'min': 64, 'max': 512},
+        'chunk_overlap': {'type': 'int', 'min': 64, 'max': 256},
+        'max_retrieval_top_k': {'type': 'int', 'min': 1, 'max': 5},
+        'similarity_threshold': {'type': 'float', 'min': 0, 'max': 1},
+    }
+}
+
+DEFAULT_EMBEDING_MODELS = ["BAAI/bge-small-en-v1.5", "BAAI/bge-base-en-v1.5", "BAAI/bge-large-en-v1.5"]
+
 DEFAULT_MODELS = [
     {
         "model_name": "Llama-3.2-1B-Instruct-Q4_K_M-GGUF",
@@ -119,25 +144,12 @@ DEFAULT_MODELS = [
     },
 ]
 
-# generation setting
-context_len = 2048
-top_k = 40
-top_p = 0.95
-temperature = 0.2
-
 home_dir = Path.home()
 llama_assistant_dir = home_dir / "llama_assistant"
 pathlib.Path.mkdir(llama_assistant_dir, parents=True, exist_ok=True)
 custom_models_file = llama_assistant_dir / "custom_models.json"
 settings_file = llama_assistant_dir / "settings.json"
 document_icon = "llama_assistant/resources/document_icon.png"
-
-# RAG setting
-embed_model_name = "BAAI/bge-base-en-v1.5"
-chunk_size = 256
-chunk_overlap = 128
-max_retrieval_top_k = 3
-similarity_threshold = 0.6
 
 if custom_models_file.exists():
     with open(custom_models_file, "r") as f:
