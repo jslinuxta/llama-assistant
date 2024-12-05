@@ -12,8 +12,8 @@ DEFAULT_SETTINGS = {
     "hey_llama_chat": False,
     "hey_llama_mic": False,
     "generation": {
-        "context_len": 2048, 
-        "max_output_tokens": 512,
+        "context_len": 4096, 
+        "max_output_tokens": 1024,
         "top_k": 40,
         "top_p": 0.95,
         "temperature": 0.2
@@ -29,8 +29,8 @@ DEFAULT_SETTINGS = {
 
 VALIDATOR = {
     'generation': {
-        'context_len': {'type': 'int', 'min': 2048},
-        'max_output_tokens': {'type': 'int', 'min': 1, 'max': 512},
+        'context_len': {'type': 'int', 'min': 4096},
+        'max_output_tokens': {'type': 'int', 'min': 512, 'max': 2048},
         'top_k': {'type': 'int', 'min': 1, 'max': 100},
         'top_p': {'type': 'float', 'min': 0, 'max': 1},
         'temperature': {'type': 'float', 'min': 0, 'max': 1},
