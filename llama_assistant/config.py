@@ -29,7 +29,7 @@ DEFAULT_SETTINGS = {
 
 VALIDATOR = {
     'generation': {
-        'context_len': {'type': 'int', 'min': 4096},
+        'context_len': {'type': 'int', 'min': 2048},
         'max_output_tokens': {'type': 'int', 'min': 512, 'max': 2048},
         'top_k': {'type': 'int', 'min': 1, 'max': 100},
         'top_p': {'type': 'float', 'min': 0, 'max': 1},
