@@ -10,6 +10,7 @@ from llama_index.core.postprocessor import SimilarityPostprocessor
 
 from llama_index.core.workflow import Event, StartEvent, StopEvent, Workflow, step
 
+SYSTEM_PROMPT = {"role": "system", "content": "Generate short and simple response."}
 
 def convert_message_list_to_str(messages):
     chat_history_str = ""
@@ -35,8 +36,13 @@ class RetrievalEvent(Event):
 
 
 class ChatHistory:
-    def __init__(self, max_history_size: int):
-        self.max_history_size = max_history_size
+    def __init__(self, llm, max_history_size: int, max_output_tokens: int):
+        self.llm = llm
+        self.max_output_tokens = max_output_tokens
+        self.max_history_size = max_history_size # in tokens
+        self.max_history_size_in_words = max_history_size * 3 / 4
+        self.max_history_size_in_words = self.max_history_size_in_words - 128 # to account for some formatting tokens
+        print("Max history size in words:", self.max_history_size_in_words)
         self.total_size = 0
         self.chat_history = []
 
@@ -48,17 +54,23 @@ class ChatHistory:
             # text-only model's message format
             new_msg_size = len(message["content"].split())
 
-        self.total_size += new_msg_size
-        self.chat_history.append(message)
-        while self.total_size > self.max_history_size:
-            oldest_msg = self.chat_history.pop(0)
-            if "content" in oldest_msg and type(oldest_msg["content"]) is list:
-                # multimodal model's message format
-                len_oldest_msg = len(oldest_msg["content"][0]["text"].split())
-            else:
-                # text-only model's message format
-                len_oldest_msg = len(oldest_msg["content"].split())
-            self.total_size -= len_oldest_msg
+        if self.total_size + new_msg_size > self.max_history_size_in_words:
+            print("Chat history is too long, summarizing the conversation...")
+            history_summary = self.llm.create_chat_completion(
+                messages= [SYSTEM_PROMPT] + self.chat_history + [{"role": "user", "content": "Briefly summarize the conversation in a few sentences."}],
+                stream=False,
+                max_tokens=256,
+            )["choices"][0]["message"]["content"]
+
+            # new history with the summary of the conversation and the last message
+            self.chat_history = [{"role": "assistant", "content": history_summary}] + [message]
+
+            self.total_size = len(history_summary.split()) + new_msg_size
+        else:
+            self.chat_history.append(message)
+            self.total_size += new_msg_size
+
+        print("\nChat history word count:", self.total_size)
 
     def get_chat_history(self):
         return self.chat_history
@@ -86,7 +98,6 @@ class RAGAgent(Workflow):
         "Please write a response to the following question, using the above information if relevant:\n"
         "{query_str}\n"
     )
-    SYSTEM_PROMPT = {"role": "system", "content": "Generate short and simple response."}
 
     def __init__(
         self,
@@ -99,16 +110,17 @@ class RAGAgent(Workflow):
         super().__init__(timeout=timeout, verbose=verbose)
         self.generation_setting = generation_setting
         self.context_len = generation_setting["context_len"]
-        # we want the retrieved context = our set value but not more than the context_len
-        self.retrieval_top_k = (self.context_len - rag_setting["chunk_size"]) // rag_setting[
-            "chunk_overlap"
-        ]
+        self.max_output_tokens = generation_setting["max_output_tokens"]
+
+        self.max_input_tokens = self.context_len - self.max_output_tokens
+
+        self.retrieval_top_k = self.max_input_tokens // rag_setting["chunk_size"] - 1
         self.retrieval_top_k = min(max(1, self.retrieval_top_k), rag_setting["max_retrieval_top_k"])
         self.search_index = None
         self.retriever = None
-        # 1 token ~ 3/4 words, because the context length accounts for both input and output tokens
-        # we need to reserve some space for the output tokens (half-space for output tokens)
-        self.chat_history = ChatHistory(max_history_size=self.context_len * 0.75 * 1 / 2)
+
+        self.chat_history = ChatHistory(llm=llm, max_output_tokens=self.max_output_tokens,
+                                         max_history_size=self.max_input_tokens)
         self.lookup_files = set()
 
         self.embed_model = HuggingFaceEmbedding(model_name=rag_setting["embed_model_name"])
@@ -132,13 +144,9 @@ class RAGAgent(Workflow):
             show_progress=True, num_workers=1
         )
 
-        if self.search_index is None:
-            self.search_index = VectorStoreIndex.from_documents(
-                documents, embed_model=self.embed_model
-            )
-        else:
-            for doc in documents:
-                self.search_index.insert(doc)  # Add the new document to the index
+        self.search_index = VectorStoreIndex.from_documents(
+            documents, embed_model=self.embed_model
+        )
 
         self.retriever = self.search_index.as_retriever(similarity_top_k=self.retrieval_top_k)
 
@@ -211,27 +219,18 @@ class RAGAgent(Workflow):
         """
         query_str = await ctx.get("query_str")
 
-        formated_query = ""
-
-        if len(self.chat_history) > 0 or self.retriever is not None:
-            self.chat_history.add_message({"role": "user", "content": query_str})
-            chat_history_str = convert_message_list_to_str(self.chat_history.get_chat_history())
-            # use llm to summarize the chat history into a single query,
-            # which is used to retrieve context from the documents
-            formated_query = self.SUMMARY_TEMPLATE.format(chat_history_str=chat_history_str)
-
-            history_summary = self.llm.create_chat_completion(
-                messages=[{"role": "user", "content": formated_query}],
+        if len(self.chat_history) > 0 and self.retriever is not None:
+            standalone_query = self.llm.create_chat_completion(
+                messages=[SYSTEM_PROMPT] + self.chat_history.get_chat_history() + [{"role": "user", "content": query_str + "\n Condense this conversation to stand-alone question using only 1 sentence."}],
                 stream=False,
                 top_k=self.generation_setting["top_k"],
                 top_p=self.generation_setting["top_p"],
                 temperature=self.generation_setting["temperature"],
+                max_tokens=128,
             )["choices"][0]["message"]["content"]
 
-            condensed_query = "Context:\n" + history_summary + "\nQuestion: " + query_str
-            # remove the last user message from the chat history
-            # later we will add the query with retrieved context (RAG)
-            self.chat_history.chat_history.pop()
+            condensed_query = standalone_query + "\nQuestion: " + query_str
+
         else:
             # if there is no history or no need for retrieval, return the query as is
             condensed_query = query_str
@@ -291,15 +290,12 @@ class RAGAgent(Workflow):
         self.chat_history.add_message(formated_message)
 
         response = self.llm.create_chat_completion(
-            messages=[self.SYSTEM_PROMPT] + self.chat_history.get_chat_history(),
+            messages=[SYSTEM_PROMPT] + self.chat_history.get_chat_history(),
             stream=streaming,
             top_k=self.generation_setting["top_k"],
             top_p=self.generation_setting["top_p"],
             temperature=self.generation_setting["temperature"],
+            max_tokens=self.max_output_tokens,
         )
-        # remove the query with context from the chat history,
-        self.chat_history.chat_history.pop()
-        # add the short query (without context) instead -> not to clutter the chat history
-        self.chat_history.add_message({"role": "user", "content": query_str})
 
         return StopEvent(result=response)

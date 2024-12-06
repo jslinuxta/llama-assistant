@@ -3,6 +3,7 @@ import copy
 import time
 import traceback
 import mistune
+import warnings
 
 from PyQt5.QtWidgets import (
     QApplication,
@@ -38,6 +39,7 @@ from llama_assistant.utils import image_to_base64_data_uri
 from llama_assistant.processing_thread import ProcessingThread
 from llama_assistant.ui_manager import UIManager
 from llama_assistant.tray_manager import TrayManager
+from llama_assistant.setting_validator import validate_numeric_field
 
 
 class LlamaAssistant(QMainWindow):
@@ -78,20 +80,28 @@ class LlamaAssistant(QMainWindow):
             self.wake_word_detector.stop()
         self.wake_word_detector = None
 
+    def recursively_update_setting(self, setting, default_setting, validator):
+        for key, value in default_setting.items():
+            if key not in setting:
+                setting[key] = value
+            elif isinstance(value, dict):
+                self.recursively_update_setting(setting[key], value, validator.get(key, {}))
+            else:
+                if key not in validator:
+                    continue
+
+                valid, message = validate_numeric_field(key, setting[key], validator[key])
+                
+                if not valid:
+                    setting[key] = value
+                    warnings.warn(message + f". Using default value {value} instead.")
+
+        
     def load_settings(self):
         if config.settings_file.exists():
             with open(config.settings_file, "r") as f:
                 self.settings = json.load(f)
-            self.settings["text_model"] = self.settings.get(
-                "text_model", config.DEFAULT_SETTINGS["text_model"]
-            )
-            self.settings["multimodal_model"] = self.settings.get(
-                "multimodal_model", config.DEFAULT_SETTINGS["multimodal_model"]
-            )
-            # Update any missing keys from default settings
-            for key, default_value in config.DEFAULT_SETTINGS.items():
-                if key not in self.settings:
-                    self.settings[key] = default_value
+            self.recursively_update_setting(self.settings, config.DEFAULT_SETTINGS, config.VALIDATOR)
             self.save_settings()
         else:
             self.settings = copy.deepcopy(config.DEFAULT_SETTINGS)
