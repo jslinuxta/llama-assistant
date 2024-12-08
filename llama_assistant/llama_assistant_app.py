@@ -40,6 +40,7 @@ from llama_assistant.processing_thread import ProcessingThread
 from llama_assistant.ui_manager import UIManager
 from llama_assistant.tray_manager import TrayManager
 from llama_assistant.setting_validator import validate_numeric_field
+from llama_assistant.utils import load_image
 
 
 class LlamaAssistant(QMainWindow):
@@ -91,17 +92,18 @@ class LlamaAssistant(QMainWindow):
                     continue
 
                 valid, message = validate_numeric_field(key, setting[key], validator[key])
-                
+
                 if not valid:
                     setting[key] = value
                     warnings.warn(message + f". Using default value {value} instead.")
 
-        
     def load_settings(self):
         if config.settings_file.exists():
             with open(config.settings_file, "r") as f:
                 self.settings = json.load(f)
-            self.recursively_update_setting(self.settings, config.DEFAULT_SETTINGS, config.VALIDATOR)
+            self.recursively_update_setting(
+                self.settings, config.DEFAULT_SETTINGS, config.VALIDATOR
+            )
             self.save_settings()
         else:
             self.settings = copy.deepcopy(config.DEFAULT_SETTINGS)
@@ -494,16 +496,7 @@ class LlamaAssistant(QMainWindow):
         remove_button.clicked.connect(lambda: self.remove_file_thumbnail(container, file_path))
 
         # Load and set the pixmap
-        import os
-
-        print("Icon path:", str(config.document_icon), os.path.exists(str(config.document_icon)))
-        pixmap = QPixmap(str(config.document_icon))
-        scaled_pixmap = pixmap.scaled(
-            80,
-            80,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
+        scaled_pixmap = load_image(config.document_icon, size=(80, 80))
         pixmap_label.setPixmap(scaled_pixmap)
 
         # Add the container to the layout
