@@ -1,1 +1,1 @@
-python3 -O -m PyInstaller --noconfirm LlamaAssistant.spec
+python -O -m PyInstaller --noconfirm LlamaAssistant.spec
