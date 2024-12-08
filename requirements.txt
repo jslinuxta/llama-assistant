@@ -1,5 +1,5 @@
 numpy==1.26.4
-PyQt5==5.15.6
+PyQt5==5.15.11
 SpeechRecognition==3.10.4
 markdown==3.7
 pynput==1.7.7
