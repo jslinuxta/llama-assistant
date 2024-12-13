@@ -6,6 +6,7 @@ from PyQt5.QtCore import (
 from llama_assistant.model_handler import handler as model_handler
 from llama_assistant.ocr_engine import ocr_engine
 
+
 class ProcessingThread(QThread):
     preloader_signal = pyqtSignal(str)
     update_signal = pyqtSignal(str)
@@ -75,6 +76,7 @@ class ProcessingThread(QThread):
     def is_preloading(self):
         return self.preloading
 
+
 class OCRThread(QThread):
     preloader_signal = pyqtSignal(str)
     update_signal = pyqtSignal(str)
@@ -96,16 +98,18 @@ class OCRThread(QThread):
 
     def is_preloading(self):
         return self.preloading
-    
+
     def run(self):
-        output = ocr_engine.perform_ocr(self.img_path, streaming=self.streaming, processing_thread=self)
+        output = ocr_engine.perform_ocr(
+            self.img_path, streaming=self.streaming, processing_thread=self
+        )
         full_response_str = "Here is the OCR result:\n"
         self.is_ocr_done = True
 
         if not self.streaming and type(output) == str:
             self.update_signal.emit(full_response_str + output)
             return
-        
+
         self.update_signal.emit(full_response_str)
         for chunk in output:
             self.update_signal.emit(chunk)
@@ -114,4 +118,3 @@ class OCRThread(QThread):
         model_handler.update_chat_history("OCR this image:", "user")
         model_handler.update_chat_history(full_response_str, "assistant")
         self.finished_signal.emit()
-        

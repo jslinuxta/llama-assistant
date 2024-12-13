@@ -12,11 +12,11 @@ DEFAULT_SETTINGS = {
     "hey_llama_chat": False,
     "hey_llama_mic": False,
     "generation": {
-        "context_len": 4096, 
+        "context_len": 4096,
         "max_output_tokens": 1024,
         "top_k": 40,
         "top_p": 0.95,
-        "temperature": 0.2
+        "temperature": 0.2,
     },
     "rag": {
         "embed_model_name": "BAAI/bge-base-en-v1.5",
@@ -28,22 +28,26 @@ DEFAULT_SETTINGS = {
 }
 
 VALIDATOR = {
-    'generation': {
-        'context_len': {'type': 'int', 'min': 2048},
-        'max_output_tokens': {'type': 'int', 'min': 512, 'max': 2048},
-        'top_k': {'type': 'int', 'min': 1, 'max': 100},
-        'top_p': {'type': 'float', 'min': 0, 'max': 1},
-        'temperature': {'type': 'float', 'min': 0, 'max': 1},
+    "generation": {
+        "context_len": {"type": "int", "min": 2048},
+        "max_output_tokens": {"type": "int", "min": 512, "max": 2048},
+        "top_k": {"type": "int", "min": 1, "max": 100},
+        "top_p": {"type": "float", "min": 0, "max": 1},
+        "temperature": {"type": "float", "min": 0, "max": 1},
     },
-    'rag': {
-        'chunk_size': {'type': 'int', 'min': 64, 'max': 512},
-        'chunk_overlap': {'type': 'int', 'min': 64, 'max': 256},
-        'max_retrieval_top_k': {'type': 'int', 'min': 1, 'max': 5},
-        'similarity_threshold': {'type': 'float', 'min': 0, 'max': 1},
-    }
+    "rag": {
+        "chunk_size": {"type": "int", "min": 64, "max": 512},
+        "chunk_overlap": {"type": "int", "min": 64, "max": 256},
+        "max_retrieval_top_k": {"type": "int", "min": 1, "max": 5},
+        "similarity_threshold": {"type": "float", "min": 0, "max": 1},
+    },
 }
 
-DEFAULT_EMBEDING_MODELS = ["BAAI/bge-small-en-v1.5", "BAAI/bge-base-en-v1.5", "BAAI/bge-large-en-v1.5"]
+DEFAULT_EMBEDING_MODELS = [
+    "BAAI/bge-small-en-v1.5",
+    "BAAI/bge-base-en-v1.5",
+    "BAAI/bge-large-en-v1.5",
+]
 
 DEFAULT_MODELS = [
     {

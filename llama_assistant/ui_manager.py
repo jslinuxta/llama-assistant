@@ -24,7 +24,7 @@ from llama_assistant.icons import (
     copy_icon_svg,
     clear_icon_svg,
     microphone_icon_svg,
-    crosshair_icon_svg
+    crosshair_icon_svg,
 )
 
 

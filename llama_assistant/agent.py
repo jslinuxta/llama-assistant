@@ -12,6 +12,7 @@ from llama_index.core.workflow import Event, StartEvent, StopEvent, Workflow, st
 
 SYSTEM_PROMPT = {"role": "system", "content": "Generate short and simple response."}
 
+
 def convert_message_list_to_str(messages):
     chat_history_str = ""
     for message in messages:
@@ -39,9 +40,11 @@ class ChatHistory:
     def __init__(self, llm, max_history_size: int, max_output_tokens: int):
         self.llm = llm
         self.max_output_tokens = max_output_tokens
-        self.max_history_size = max_history_size # in tokens
+        self.max_history_size = max_history_size  # in tokens
         self.max_history_size_in_words = max_history_size * 3 / 4
-        self.max_history_size_in_words = self.max_history_size_in_words - 128 # to account for some formatting tokens
+        self.max_history_size_in_words = (
+            self.max_history_size_in_words - 128
+        )  # to account for some formatting tokens
         print("Max history size in words:", self.max_history_size_in_words)
         self.total_size = 0
         self.chat_history = []
@@ -57,7 +60,14 @@ class ChatHistory:
         if self.total_size + new_msg_size > self.max_history_size_in_words:
             print("Chat history is too long, summarizing the conversation...")
             history_summary = self.llm.create_chat_completion(
-                messages= [SYSTEM_PROMPT] + self.chat_history + [{"role": "user", "content": "Briefly summarize the conversation in a few sentences."}],
+                messages=[SYSTEM_PROMPT]
+                + self.chat_history
+                + [
+                    {
+                        "role": "user",
+                        "content": "Briefly summarize the conversation in a few sentences.",
+                    }
+                ],
                 stream=False,
                 max_tokens=256,
             )["choices"][0]["message"]["content"]
@@ -119,8 +129,11 @@ class RAGAgent(Workflow):
         self.search_index = None
         self.retriever = None
 
-        self.chat_history = ChatHistory(llm=llm, max_output_tokens=self.max_output_tokens,
-                                         max_history_size=self.max_input_tokens)
+        self.chat_history = ChatHistory(
+            llm=llm,
+            max_output_tokens=self.max_output_tokens,
+            max_history_size=self.max_input_tokens,
+        )
         self.lookup_files = set()
 
         self.embed_model = HuggingFaceEmbedding(model_name=rag_setting["embed_model_name"])
@@ -144,9 +157,7 @@ class RAGAgent(Workflow):
             show_progress=True, num_workers=1
         )
 
-        self.search_index = VectorStoreIndex.from_documents(
-            documents, embed_model=self.embed_model
-        )
+        self.search_index = VectorStoreIndex.from_documents(documents, embed_model=self.embed_model)
 
         self.retriever = self.search_index.as_retriever(similarity_top_k=self.retrieval_top_k)
 
@@ -221,7 +232,15 @@ class RAGAgent(Workflow):
 
         if len(self.chat_history) > 0 and self.retriever is not None:
             standalone_query = self.llm.create_chat_completion(
-                messages=[SYSTEM_PROMPT] + self.chat_history.get_chat_history() + [{"role": "user", "content": query_str + "\n Condense this conversation to stand-alone question using only 1 sentence."}],
+                messages=[SYSTEM_PROMPT]
+                + self.chat_history.get_chat_history()
+                + [
+                    {
+                        "role": "user",
+                        "content": query_str
+                        + "\n Condense this conversation to stand-alone question using only 1 sentence.",
+                    }
+                ],
                 stream=False,
                 top_k=self.generation_setting["top_k"],
                 top_p=self.generation_setting["top_p"],

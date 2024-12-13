@@ -14,15 +14,9 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QMessageBox,
     QSystemTrayIcon,
-    QRubberBand
+    QRubberBand,
 )
-from PyQt5.QtCore import (
-    Qt,
-    QPoint,
-    QTimer,
-    QSize,
-    QRect
-)
+from PyQt5.QtCore import Qt, QPoint, QTimer, QSize, QRect
 from PyQt5.QtGui import (
     QPixmap,
     QPainter,
@@ -201,18 +195,20 @@ class LlamaAssistant(QMainWindow):
 
         self.last_response = ""
         self.gen_mark_down = False
-        
-        self.ui_manager.chat_box.append(f'<div></div><span style="color: #aaa;"><b>You:</b></span> OCR this captured region')
+
+        self.ui_manager.chat_box.append(
+            f'<div></div><span style="color: #aaa;"><b>You:</b></span> OCR this captured region'
+        )
         self.ui_manager.chat_box.append('<span style="color: #aaa;"><b>AI:</b></span> ')
-       
+
         self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
 
         img_path = config.ocr_tmp_file
         if not img_path.exists():
             print("No image find for OCR")
-            self.ui_manager.chat_box.append('No image found for OCR')
+            self.ui_manager.chat_box.append("No image found for OCR")
             return
-        
+
         self.processing_thread = OCRThread(img_path, streaming=True)
         self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
@@ -223,7 +219,6 @@ class LlamaAssistant(QMainWindow):
         self.show()
         self.screen_capture_widget.hide()
         self.has_ocr_context = True
-
 
     def on_submit(self):
         message = self.ui_manager.input_field.toPlainText()
@@ -238,7 +233,7 @@ class LlamaAssistant(QMainWindow):
 
             for file_path in self.dropped_files:
                 self.remove_file_thumbnail(self.file_containers[file_path], file_path)
-            
+
             return
 
         self.last_response = ""
@@ -316,7 +311,7 @@ class LlamaAssistant(QMainWindow):
             prompt,
             image=image,
             lookup_files=file_paths,
-            ocr_img_path=config.ocr_tmp_file if self.has_ocr_context else None
+            ocr_img_path=config.ocr_tmp_file if self.has_ocr_context else None,
         )
         self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
@@ -346,7 +341,7 @@ class LlamaAssistant(QMainWindow):
                 QApplication.processEvents()  # Process events to update the UI
                 time.sleep(0.05)
             time.sleep(0.5)
-        
+
     def update_chat_box(self, text):
         self.last_response += text
 
@@ -360,7 +355,7 @@ class LlamaAssistant(QMainWindow):
             formatted_text = markdown_response
         else:
             formatted_text = self.last_response.replace("\n", "<br>") + "<div></div>"
-        
+
         self.clear_text_from_start_pos()
         cursor = self.ui_manager.chat_box.textCursor()
         cursor.insertHtml(formatted_text)
