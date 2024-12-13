@@ -214,6 +214,10 @@ class ModelHandler:
         return response
 
     def update_chat_history(self, message: str, role: str):
+        if self.loaded_agent is None:
+            print("Agent has not been initialized. Cannot update chat history.")
+            return
+        
         agent = self.loaded_agent.get("agent")
         if agent:
             agent.chat_history.add_message({"role": role, "content": message})

@@ -150,6 +150,7 @@ pathlib.Path.mkdir(llama_assistant_dir, parents=True, exist_ok=True)
 custom_models_file = llama_assistant_dir / "custom_models.json"
 settings_file = llama_assistant_dir / "settings.json"
 document_icon = "llama_assistant/resources/document_icon.png"
+ocr_tmp_file = llama_assistant_dir / "ocr_tmp.png"
 
 if custom_models_file.exists():
     with open(custom_models_file, "r") as f:

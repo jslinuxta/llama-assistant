@@ -13,4 +13,6 @@ llama-index-readers-file==0.4.0
 llama-index-embeddings-huggingface==0.4.0
 docx2txt==0.8
 mistune==3.0.2
+paddlepaddle==2.6.2
+paddleocr==2.9.1
 git+https://github.com/stlukey/whispercpp.py

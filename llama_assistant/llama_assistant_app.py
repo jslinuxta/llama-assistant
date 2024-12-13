@@ -14,11 +14,14 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QMessageBox,
     QSystemTrayIcon,
+    QRubberBand
 )
 from PyQt5.QtCore import (
     Qt,
     QPoint,
     QTimer,
+    QSize,
+    QRect
 )
 from PyQt5.QtGui import (
     QPixmap,
@@ -36,9 +39,10 @@ from llama_assistant.global_hotkey import GlobalHotkey
 from llama_assistant.setting_dialog import SettingsDialog
 from llama_assistant.speech_recognition_thread import SpeechRecognitionThread
 from llama_assistant.utils import image_to_base64_data_uri
-from llama_assistant.processing_thread import ProcessingThread
+from llama_assistant.processing_thread import ProcessingThread, OCRThread
 from llama_assistant.ui_manager import UIManager
 from llama_assistant.tray_manager import TrayManager
+from llama_assistant.screen_capture_widget import ScreenCaptureWidget
 from llama_assistant.setting_validator import validate_numeric_field
 from llama_assistant.utils import load_image
 
@@ -50,6 +54,7 @@ class LlamaAssistant(QMainWindow):
         self.load_settings()
         self.ui_manager = UIManager(self)
         self.tray_manager = TrayManager(self)
+        self.screen_capture_widget = ScreenCaptureWidget(self)
         self.setup_global_shortcut()
         self.last_response = ""
         self.dropped_image = None
@@ -62,6 +67,12 @@ class LlamaAssistant(QMainWindow):
         self.current_multimodal_model = self.settings.get("multimodal_model")
         self.processing_thread = None
         self.markdown_creator = mistune.create_markdown()
+        self.gen_mark_down = True
+        self.has_ocr_context = False
+
+    def capture_screenshot(self):
+        self.hide()
+        self.screen_capture_widget.show()
 
     def tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
@@ -183,6 +194,37 @@ class LlamaAssistant(QMainWindow):
             self.raise_()
             self.ui_manager.input_field.setFocus()
 
+    def on_ocr_button_clicked(self):
+        self.show()
+        self.show_chat_box()
+        self.screen_capture_widget.hide()
+
+        self.last_response = ""
+        self.gen_mark_down = False
+        
+        self.ui_manager.chat_box.append(f'<div></div><span style="color: #aaa;"><b>You:</b></span> OCR this captured region')
+        self.ui_manager.chat_box.append('<span style="color: #aaa;"><b>AI:</b></span> ')
+       
+        self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
+
+        img_path = config.ocr_tmp_file
+        if not img_path.exists():
+            print("No image find for OCR")
+            self.ui_manager.chat_box.append('No image found for OCR')
+            return
+        
+        self.processing_thread = OCRThread(img_path, streaming=True)
+        self.processing_thread.preloader_signal.connect(self.indicate_loading)
+        self.processing_thread.update_signal.connect(self.update_chat_box)
+        self.processing_thread.finished_signal.connect(self.on_processing_finished)
+        self.processing_thread.start()
+
+    def on_ask_with_ocr_context(self):
+        self.show()
+        self.screen_capture_widget.hide()
+        self.has_ocr_context = True
+
+
     def on_submit(self):
         message = self.ui_manager.input_field.toPlainText()
         if message == "":
@@ -196,10 +238,11 @@ class LlamaAssistant(QMainWindow):
 
             for file_path in self.dropped_files:
                 self.remove_file_thumbnail(self.file_containers[file_path], file_path)
-
+            
             return
 
         self.last_response = ""
+        self.gen_mark_down = True
 
         if self.dropped_image:
             self.process_image_with_prompt(self.dropped_image, self.dropped_files, message)
@@ -244,12 +287,15 @@ class LlamaAssistant(QMainWindow):
             self.rag_setting,
             prompt,
             lookup_files=file_paths,
+            ocr_img_path=config.ocr_tmp_file if self.has_ocr_context else None,
         )
 
         self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
+
+        self.has_ocr_context = False
 
     def process_image_with_prompt(self, image_path, file_paths, prompt):
         self.show_chat_box()
@@ -270,20 +316,27 @@ class LlamaAssistant(QMainWindow):
             prompt,
             image=image,
             lookup_files=file_paths,
+            ocr_img_path=config.ocr_tmp_file if self.has_ocr_context else None
         )
         self.processing_thread.preloader_signal.connect(self.indicate_loading)
         self.processing_thread.update_signal.connect(self.update_chat_box)
         self.processing_thread.finished_signal.connect(self.on_processing_finished)
         self.processing_thread.start()
 
+        self.has_ocr_context = False
+
+    def clear_text_from_start_pos(self):
+        cursor = self.ui_manager.chat_box.textCursor()
+        cursor.setPosition(self.start_cursor_pos)
+        # Select all text from the start_pos to the end
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        # Remove the selected text
+        cursor.removeSelectedText()
+
     def indicate_loading(self, message):
         while self.processing_thread.is_preloading():
+            self.clear_text_from_start_pos()
             cursor = self.ui_manager.chat_box.textCursor()
-            cursor.setPosition(self.start_cursor_pos)
-            # Select all text from the start_pos to the end
-            cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-            # Remove the selected text
-            cursor.removeSelectedText()
             # create animation where the characters are displayed one by one
             for c in message:
                 if c == " ":
@@ -293,23 +346,24 @@ class LlamaAssistant(QMainWindow):
                 QApplication.processEvents()  # Process events to update the UI
                 time.sleep(0.05)
             time.sleep(0.5)
-
+        
     def update_chat_box(self, text):
         self.last_response += text
-        markdown_response = self.markdown_creator(self.last_response)
-        # Since cannot change the font size of the h1, h2 tag, we will replace it with h3
-        markdown_response = markdown_response.replace("<h1>", "<h3>").replace("</h1>", "</h3>")
-        markdown_response = markdown_response.replace("<h2>", "<h3>").replace("</h2>", "</h3>")
-        markdown_response += "<div></div>"
+
+        formatted_text = ""
+        if self.gen_mark_down:
+            markdown_response = self.markdown_creator(self.last_response)
+            # Since cannot change the font size of the h1, h2 tag, we will replace it with h3
+            markdown_response = markdown_response.replace("<h1>", "<h3>").replace("</h1>", "</h3>")
+            markdown_response = markdown_response.replace("<h2>", "<h3>").replace("</h2>", "</h3>")
+            markdown_response += "<div></div>"
+            formatted_text = markdown_response
+        else:
+            formatted_text = self.last_response.replace("\n", "<br>") + "<div></div>"
+        
+        self.clear_text_from_start_pos()
         cursor = self.ui_manager.chat_box.textCursor()
-        cursor.setPosition(
-            self.start_cursor_pos
-        )  # regenerate the updated text from the start position
-        # Select all text from the start_pos to the end
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        # Remove the selected text
-        cursor.removeSelectedText()
-        cursor.insertHtml(markdown_response)
+        cursor.insertHtml(formatted_text)
         self.ui_manager.chat_box.verticalScrollBar().setValue(
             self.ui_manager.chat_box.verticalScrollBar().maximum()
         )
@@ -513,14 +567,6 @@ class LlamaAssistant(QMainWindow):
             self.dropped_image = None
             self.ui_manager.input_field.setPlaceholderText("Ask me anything...")
             self.setFixedHeight(self.height() - 110)  # Decrease height after removing image
-
-    def mousePressEvent(self, event):
-        self.oldPos = event.globalPos()
-
-    def mouseMoveEvent(self, event):
-        delta = QPoint(event.globalPos() - self.oldPos)
-        self.move(self.x() + delta.x(), self.y() + delta.y())
-        self.oldPos = event.globalPos()
 
     def on_wake_word_detected(self, model_name):
         self.show()

@@ -54,6 +54,7 @@ https://github.com/user-attachments/assets/af2c544b-6d46-4c44-87d8-9a051ba213db
 - [x] ⚡ Streaming support for response.
 - [x] 🎙️ Add offline STT support: WhisperCPP.
 - [x] 🧠 Knowledge database: LlamaIndex
+- [x] ⌖ Screen Spot: Screen capture and analyze with OCR
 - [ ] 🔌 Plugin system for extensibility.
 - [ ] 📰 News and weather updates.
 - [ ] 📧 Email integration with Gmail and Outlook.

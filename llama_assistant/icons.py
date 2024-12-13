@@ -29,6 +29,16 @@ microphone_icon_svg = """
 </svg>
 """
 
+crosshair_icon_svg = """
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="6"></circle>
+  <line x1="12" y1="2" x2="12" y2="6"></line>
+  <line x1="12" y1="18" x2="12" y2="22"></line>
+  <line x1="2" y1="12" x2="6" y2="12"></line>
+  <line x1="18" y1="12" x2="22" y2="12"></line>
+</svg>
+"""
+
 
 def create_icon_from_svg(svg_string):
     svg_bytes = QByteArray(svg_string.encode("utf-8"))
