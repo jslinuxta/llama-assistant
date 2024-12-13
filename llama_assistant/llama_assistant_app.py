@@ -14,9 +14,8 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QMessageBox,
     QSystemTrayIcon,
-    QRubberBand,
 )
-from PyQt5.QtCore import Qt, QPoint, QTimer, QSize, QRect
+from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import (
     QPixmap,
     QPainter,
@@ -24,7 +23,7 @@ from PyQt5.QtGui import (
     QDropEvent,
     QBitmap,
     QTextCursor,
-    QFont,
+    QMouseEvent,
 )
 
 from llama_assistant import config
@@ -63,6 +62,24 @@ class LlamaAssistant(QMainWindow):
         self.markdown_creator = mistune.create_markdown()
         self.gen_mark_down = True
         self.has_ocr_context = False
+
+        # Add drag-drop move support
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.oldPos = None
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self.oldPos is not None:
+            delta = event.globalPos() - self.oldPos
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.oldPos = event.globalPos()
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self.oldPos = None
 
     def capture_screenshot(self):
         self.hide()
