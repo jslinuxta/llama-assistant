@@ -24,6 +24,7 @@ from llama_assistant.icons import (
     copy_icon_svg,
     clear_icon_svg,
     microphone_icon_svg,
+    crosshair_icon_svg,
 )
 
 
@@ -87,6 +88,7 @@ class UIManager:
         self.input_field.dropEvent = self.parent.dropEvent
         input_layout.addWidget(self.input_field)
 
+        button_layout = QVBoxLayout()
         self.mic_button = QPushButton(self.parent)
         self.mic_button.setIcon(create_icon_from_svg(microphone_icon_svg))
         self.mic_button.setIconSize(QSize(24, 24))
@@ -104,7 +106,29 @@ class UIManager:
             }
         """
         )
-        input_layout.addWidget(self.mic_button)
+        button_layout.addWidget(self.mic_button)
+
+        self.screenshot_button = QPushButton(self.parent)
+        self.screenshot_button.setIcon(create_icon_from_svg(crosshair_icon_svg))
+        self.screenshot_button.setIconSize(QSize(24, 24))
+        self.screenshot_button.setFixedSize(40, 40)
+        self.screenshot_button.clicked.connect(self.parent.capture_screenshot)
+        self.screenshot_button.setToolTip("Screen Spot")
+        self.screenshot_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: rgba(100, 100, 100, 200);
+                border: none;
+                border-radius: 20px;
+            }
+            QPushButton:hover {
+                background-color: rgba(100, 100, 100, 230);
+            }
+        """
+        )
+        button_layout.addWidget(self.screenshot_button)
+
+        input_layout.addLayout(button_layout)
 
         close_button = QPushButton("×", self.parent)
         close_button.clicked.connect(self.parent.hide)

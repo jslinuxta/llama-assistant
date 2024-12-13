@@ -24,6 +24,7 @@ from llama_assistant.shortcut_recorder import ShortcutRecorder
 from llama_assistant import config
 from llama_assistant.setting_validator import validate_numeric_field
 
+
 class SettingsDialog(QDialog):
     settingsSaved = pyqtSignal()
 
@@ -218,56 +219,76 @@ class SettingsDialog(QDialog):
         self.main_layout.addWidget(group_box)
 
     def accept(self):
-        valid, message = validate_numeric_field("Context Length", self.context_len_input.text(),
-                                                 constraints=config.VALIDATOR['generation']['context_len'])
+        valid, message = validate_numeric_field(
+            "Context Length",
+            self.context_len_input.text(),
+            constraints=config.VALIDATOR["generation"]["context_len"],
+        )
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
-        valid, message = validate_numeric_field("Temperature", self.temperature_input.text(),
-                                                 constraints=config.VALIDATOR['generation']['temperature'])
+
+        valid, message = validate_numeric_field(
+            "Temperature",
+            self.temperature_input.text(),
+            constraints=config.VALIDATOR["generation"]["temperature"],
+        )
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
-        valid, message = validate_numeric_field("Top p", self.top_p_input.text(),
-                                                    constraints=config.VALIDATOR['generation']['top_p'])
+
+        valid, message = validate_numeric_field(
+            "Top p", self.top_p_input.text(), constraints=config.VALIDATOR["generation"]["top_p"]
+        )
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
-        valid, message = validate_numeric_field("Top k", self.top_k_input.text(),
-                                                    constraints=config.VALIDATOR['generation']['top_k'])
+
+        valid, message = validate_numeric_field(
+            "Top k", self.top_k_input.text(), constraints=config.VALIDATOR["generation"]["top_k"]
+        )
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
-        valid, message = validate_numeric_field("Chunk Size", self.chunk_size_input.text(),
-                                                    constraints=config.VALIDATOR['rag']['chunk_size'])
+
+        valid, message = validate_numeric_field(
+            "Chunk Size",
+            self.chunk_size_input.text(),
+            constraints=config.VALIDATOR["rag"]["chunk_size"],
+        )
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
-        valid, message = validate_numeric_field("Chunk Overlap", self.chunk_overlap_input.text(),
-                                                    constraints=config.VALIDATOR['rag']['chunk_overlap'])
+
+        valid, message = validate_numeric_field(
+            "Chunk Overlap",
+            self.chunk_overlap_input.text(),
+            constraints=config.VALIDATOR["rag"]["chunk_overlap"],
+        )
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
-        valid, message = validate_numeric_field("Max Retrieval Top k", self.max_retrieval_top_k_input.text(),
-                                                    constraints=config.VALIDATOR['rag']['max_retrieval_top_k'])
-        
+
+        valid, message = validate_numeric_field(
+            "Max Retrieval Top k",
+            self.max_retrieval_top_k_input.text(),
+            constraints=config.VALIDATOR["rag"]["max_retrieval_top_k"],
+        )
+
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
-        valid, message = validate_numeric_field("Similarity Threshold", self.similarity_threshold_input.text(),
-                                                    constraints=config.VALIDATOR['rag']['similarity_threshold'])
-        
+
+        valid, message = validate_numeric_field(
+            "Similarity Threshold",
+            self.similarity_threshold_input.text(),
+            constraints=config.VALIDATOR["rag"]["similarity_threshold"],
+        )
+
         if not valid:
             QMessageBox.warning(self, "Validation Error", message)
             return
-        
+
         self.save_settings()
         self.settingsSaved.emit()
         super().accept()
@@ -317,29 +338,66 @@ class SettingsDialog(QDialog):
             if "rag" not in settings:
                 settings["rag"] = {}
 
-            embed_model = settings["rag"].get("embed_model_name", config.DEFAULT_SETTINGS['rag']['embed_model_name'])
+            embed_model = settings["rag"].get(
+                "embed_model_name", config.DEFAULT_SETTINGS["rag"]["embed_model_name"]
+            )
             if embed_model in config.DEFAULT_EMBEDING_MODELS:
                 self.embed_model_combo.setCurrentText(embed_model)
-            
-            self.chunk_size_input.setText(str(settings["rag"].get("chunk_size", config.DEFAULT_SETTINGS['rag']['chunk_size'])))
+
+            self.chunk_size_input.setText(
+                str(settings["rag"].get("chunk_size", config.DEFAULT_SETTINGS["rag"]["chunk_size"]))
+            )
             self.chunk_overlap_input.setText(
-                str(settings["rag"].get("chunk_overlap", config.DEFAULT_SETTINGS['rag']['chunk_overlap']))
+                str(
+                    settings["rag"].get(
+                        "chunk_overlap", config.DEFAULT_SETTINGS["rag"]["chunk_overlap"]
+                    )
+                )
             )
             self.max_retrieval_top_k_input.setText(
-                str(settings["rag"].get("max_retrieval_top_k", config.DEFAULT_SETTINGS['rag']['max_retrieval_top_k']))
+                str(
+                    settings["rag"].get(
+                        "max_retrieval_top_k", config.DEFAULT_SETTINGS["rag"]["max_retrieval_top_k"]
+                    )
+                )
             )
             self.similarity_threshold_input.setText(
-                str(settings["rag"].get("similarity_threshold", config.DEFAULT_SETTINGS['rag']['similarity_threshold']))
+                str(
+                    settings["rag"].get(
+                        "similarity_threshold",
+                        config.DEFAULT_SETTINGS["rag"]["similarity_threshold"],
+                    )
+                )
             )
             self.context_len_input.setText(
-                str(settings["generation"].get("context_len", config.DEFAULT_SETTINGS['generation']['context_len']))
+                str(
+                    settings["generation"].get(
+                        "context_len", config.DEFAULT_SETTINGS["generation"]["context_len"]
+                    )
+                )
             )
-            
+
             self.temperature_input.setText(
-                str(settings["generation"].get("temperature", config.DEFAULT_SETTINGS['generation']['temperature']))
+                str(
+                    settings["generation"].get(
+                        "temperature", config.DEFAULT_SETTINGS["generation"]["temperature"]
+                    )
+                )
             )
-            self.top_p_input.setText(str(settings["generation"].get("top_p", config.DEFAULT_SETTINGS['generation']['top_p'])))
-            self.top_k_input.setText(str(settings["generation"].get("top_k", config.DEFAULT_SETTINGS['generation']['top_k'])))
+            self.top_p_input.setText(
+                str(
+                    settings["generation"].get(
+                        "top_p", config.DEFAULT_SETTINGS["generation"]["top_p"]
+                    )
+                )
+            )
+            self.top_k_input.setText(
+                str(
+                    settings["generation"].get(
+                        "top_k", config.DEFAULT_SETTINGS["generation"]["top_k"]
+                    )
+                )
+            )
         else:
             self.color = QColor("#1E1E1E")
             self.shortcut_recorder.setText("<cmd>+<shift>+<space>")
