@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QPushButton
 from PyQt5.QtCore import Qt, QRect
-from PyQt5.QtGui import QPainter, QColor, QPen
+from PyQt5.QtGui import QPainter, QColor, QPen, QKeyEvent
 
 from llama_assistant import config
 from llama_assistant.ocr_engine import OCREngine
@@ -73,6 +73,11 @@ class ScreenCaptureWidget(QWidget):
     def hide(self):
         self.button_widget.hide()
         super().hide()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key_Escape:
+            self.hide()
+            self.parent.show()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
