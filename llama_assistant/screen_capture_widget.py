@@ -94,6 +94,8 @@ class ScreenCaptureWidget(QWidget):
         self.preview_label = QLabel()
         self.preview_label.setMinimumSize(QSize(400, 250))  # Bigger preview
         self.preview_label.setAlignment(Qt.AlignCenter)
+        self.preview_label.setStyleSheet("background-color: transparent;")
+        self.preview_label.setScaledContents(True)  # Make content scale to fit label
         preview_layout.addWidget(self.preview_label)
 
         # Modern button styling
@@ -243,8 +245,7 @@ class ScreenCaptureWidget(QWidget):
         print(f"Captured region saved at '{config.ocr_tmp_file}'.")
 
         # Update preview label with captured image
-        preview_pixmap = pixmap.scaled(400, 250, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.preview_label.setPixmap(preview_pixmap)
+        self.preview_label.setPixmap(pixmap)
 
         # Restore visibility if needed
         if restore_visibility:
