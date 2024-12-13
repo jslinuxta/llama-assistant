@@ -236,6 +236,10 @@ class LlamaAssistant(QMainWindow):
         self.show()
         self.screen_capture_widget.hide()
         self.has_ocr_context = True
+        # Show the screenshot as reference image
+        if config.ocr_tmp_file.exists():
+            self.dropped_image = str(config.ocr_tmp_file)
+            self.show_image_thumbnail(self.dropped_image)
 
     def on_submit(self):
         message = self.ui_manager.input_field.toPlainText()
@@ -247,6 +251,7 @@ class LlamaAssistant(QMainWindow):
             self.clear_chat()
             self.remove_image_thumbnail()
             self.dropped_image = None
+            self.has_ocr_context = False
 
             for file_path in self.dropped_files:
                 self.remove_file_thumbnail(self.file_containers[file_path], file_path)
@@ -256,7 +261,7 @@ class LlamaAssistant(QMainWindow):
         self.last_response = ""
         self.gen_mark_down = True
 
-        if self.dropped_image:
+        if self.dropped_image and not self.has_ocr_context:
             self.process_image_with_prompt(self.dropped_image, self.dropped_files, message)
             self.dropped_image = None
             self.remove_image_thumbnail()
@@ -577,6 +582,7 @@ class LlamaAssistant(QMainWindow):
             self.image_label.setParent(None)
             self.image_label = None
             self.dropped_image = None
+            self.has_ocr_context = False
             self.ui_manager.input_field.setPlaceholderText("Ask me anything...")
             self.setFixedHeight(self.height() - 110)  # Decrease height after removing image
 
