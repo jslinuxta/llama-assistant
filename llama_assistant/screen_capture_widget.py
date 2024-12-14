@@ -10,13 +10,15 @@ from PyQt5.QtWidgets import (
     QFrame,
 )
 from PyQt5.QtCore import Qt, QRect, QTimer, QSize, QRectF
-from PyQt5.QtGui import QPainter, QColor, QPen, QKeyEvent, QPixmap, QPainterPath
+from PyQt5.QtGui import QPainter, QColor, QPen, QKeyEvent, QPainterPath
 
 from llama_assistant import config
 from llama_assistant.ocr_engine import OCREngine
 
 if TYPE_CHECKING:
     from llama_assistant.llama_assistant_app import LlamaAssistantApp
+
+LEFT_BOTTOM_MARGIN = 64
 
 
 class ScreenCaptureWidget(QWidget):
@@ -29,7 +31,9 @@ class ScreenCaptureWidget(QWidget):
 
         # Get screen size
         screen = QDesktopWidget().screenGeometry()
-        self.setGeometry(0, 0, screen.width(), screen.height())
+        self.screen_width = screen.width()
+        self.screen_height = screen.height()
+        self.setGeometry(0, 0, self.screen_width, self.screen_height)
 
         # Set crosshairs cursor
         self.setCursor(Qt.CrossCursor)
@@ -283,11 +287,20 @@ class ScreenCaptureWidget(QWidget):
             widget_width = 450
             widget_height = 350
 
-            print("Showing buttons")
+            # Calculate position to ensure buttons stay within screen bounds
+            # Add LEFT_BOTTOM_MARGIN pixels offset from left to avoid macOS dock
+            x_pos = min(
+                max(LEFT_BOTTOM_MARGIN, rect.left() + (rect.width() - widget_width) // 2),
+                self.screen_width - widget_width,
+            )
 
-            # Center the button widget below the selection rectangle
-            x_pos = rect.left() + (rect.width() - widget_width) // 2
-            self.button_widget.setGeometry(x_pos, rect.bottom() + 20, widget_width, widget_height)
+            # Check if there's enough space below the selection
+            y_pos = rect.bottom() + LEFT_BOTTOM_MARGIN
+            if y_pos + widget_height > self.screen_height:
+                # If not enough space below, place above the selection
+                y_pos = max(0, rect.top() - widget_height - LEFT_BOTTOM_MARGIN)
+
+            self.button_widget.setGeometry(x_pos, y_pos, widget_width, widget_height)
             self.button_widget.setAttribute(Qt.WA_TranslucentBackground)
             self.button_widget.setWindowFlags(Qt.FramelessWindowHint)
             self.button_widget.show()
