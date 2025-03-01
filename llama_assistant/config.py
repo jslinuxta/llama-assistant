@@ -126,6 +126,14 @@ DEFAULT_MODELS = [
         "repo_id": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
         "filename": "DeepSeek-R1-Distill-Qwen-1.5B-Q6_K.gguf",
     },
+    {
+        "model_name": "DeepSeek-R1-Distill-Llama-8B-GGUF",
+        "model_id": "bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF-Q4_K_M",
+        "model_type": "text-reasoning",
+        "model_path": None,
+        "repo_id": "bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF",
+        "filename": "DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
+    },
     # VLMs
     {
         "model_name": "Moondream2",

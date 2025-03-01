@@ -137,6 +137,7 @@ class LlamaAssistant(QMainWindow):
             self.deinit_wake_word_detector()
         self.current_text_model = self.settings.get("text_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
+        self.current_text_reasoning_model = self.settings.get("text_reasoning_model")
         self.generation_setting = self.settings.get("generation")
         self.rag_setting = self.settings.get("rag")
         self.reasoning_enabled = self.settings.get("reasoning_enabled")

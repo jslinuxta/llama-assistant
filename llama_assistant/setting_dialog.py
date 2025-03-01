@@ -337,6 +337,10 @@ class SettingsDialog(QDialog):
             if multimodal_model in self.get_model_names_by_type("image"):
                 self.multimodal_model_combo.setCurrentText(multimodal_model)
 
+            text_reasoning_model = settings.get("text_reasoning_model")
+            if text_reasoning_model in self.get_model_names_by_type("text-reasoning"):
+                self.text_reasoning_model_combo.setCurrentText(text_reasoning_model)
+
             self.hey_llama_chat_checkbox.setChecked(settings.get("hey_llama_chat", False))
             self.hey_llama_mic_checkbox.setChecked(settings.get("hey_llama_mic", False))
             self.update_hey_llama_mic_state(settings.get("hey_llama_chat", False))
@@ -418,6 +422,7 @@ class SettingsDialog(QDialog):
             "transparency": self.transparency_slider.value(),
             "text_model": self.text_model_combo.currentText(),
             "multimodal_model": self.multimodal_model_combo.currentText(),
+            "text_reasoning_model": self.text_reasoning_model_combo.currentText(),
             "hey_llama_chat": self.hey_llama_chat_checkbox.isChecked(),
             "hey_llama_mic": self.hey_llama_mic_checkbox.isChecked(),
             "generation": {
