@@ -89,6 +89,7 @@ class ModelHandler:
                 loaded_model = Llama.from_pretrained(
                     repo_id=model.repo_id,
                     filename=model.filename,
+                    n_gpu_layers=-1,
                     n_ctx=generation_setting["context_len"],
                 )
             elif model.model_type == "image":
