@@ -39,6 +39,19 @@ crosshair_icon_svg = """
 </svg>
 """
 
+reasoning_icon_svg = """
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M9 18h6"></path>
+  <path d="M10 22h4"></path>
+  <path d="M12 2a7 7 0 0 1 7 7c0 2.6-1.4 4.9-3.5 6.1H8.5A7 7 0 0 1 5 9a7 7 0 0 1 7-7z"></path>
+  <circle cx="12" cy="9" r="2"></circle>
+  <path d="M15 9h2"></path>
+  <path d="M7 9h2"></path>
+  <path d="M12 6v2"></path>
+  <path d="M12 11v2"></path>
+</svg>
+"""
+
 
 def create_icon_from_svg(svg_string):
     svg_bytes = QByteArray(svg_string.encode("utf-8"))

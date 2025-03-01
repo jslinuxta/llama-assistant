@@ -84,7 +84,7 @@ class ModelHandler:
             return None
 
         if model.is_online():
-            if model.model_type == "text":
+            if model.model_type == "text" or model.model_type == "text-reasoning":
                 print("load online model")
                 loaded_model = Llama.from_pretrained(
                     repo_id=model.repo_id,

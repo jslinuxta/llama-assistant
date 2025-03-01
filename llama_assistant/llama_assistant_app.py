@@ -57,6 +57,7 @@ class LlamaAssistant(QMainWindow):
         self.is_listening = False
         self.image_label = None
         self.current_text_model = self.settings.get("text_model")
+        self.current_text_reasoning_model = self.settings.get("text_reasoning_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
         self.processing_thread = None
         self.markdown_creator = mistune.create_markdown()
@@ -138,6 +139,7 @@ class LlamaAssistant(QMainWindow):
         self.current_multimodal_model = self.settings.get("multimodal_model")
         self.generation_setting = self.settings.get("generation")
         self.rag_setting = self.settings.get("rag")
+        self.reasoning_enabled = self.settings.get("reasoning_enabled")
 
     def setup_global_shortcut(self):
         try:
@@ -204,6 +206,13 @@ class LlamaAssistant(QMainWindow):
             self.activateWindow()
             self.raise_()
             self.ui_manager.input_field.setFocus()
+
+    def toggle_reasoning(self):
+        self.reasoning_enabled = not self.reasoning_enabled
+        self.settings["reasoning_enabled"] = self.reasoning_enabled
+        self.save_settings()
+        self.ui_manager.set_reasoning_button_style()
+        print(f"Reasoning is now {'enabled' if self.reasoning_enabled else 'disabled'}.")
 
     def on_ocr_button_clicked(self):
         self.show()
@@ -299,7 +308,9 @@ class LlamaAssistant(QMainWindow):
         self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
 
         self.processing_thread = ProcessingThread(
-            self.current_text_model,
+            self.current_text_model
+            if not self.reasoning_enabled
+            else self.current_text_reasoning_model,
             self.generation_setting,
             self.rag_setting,
             prompt,
@@ -370,6 +381,10 @@ class LlamaAssistant(QMainWindow):
         formatted_text = ""
         if self.gen_mark_down:
             markdown_response = self.markdown_creator(self.last_response)
+            markdown_response = markdown_response.replace(
+                "&lt;think&gt;", "<div class='think'>Thinking:<p>"
+            )
+            markdown_response = markdown_response.replace("&lt;/think&gt;", "</div>")
             # Since cannot change the font size of the h1, h2 tag, we will replace it with h3
             markdown_response = markdown_response.replace("<h1>", "<h3>").replace("</h1>", "</h3>")
             markdown_response = markdown_response.replace("<h2>", "<h3>").replace("</h2>", "</h3>")

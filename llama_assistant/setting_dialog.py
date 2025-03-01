@@ -116,6 +116,15 @@ class SettingsDialog(QDialog):
         text_model_layout.addStretch()
         layout.addLayout(text_model_layout)
 
+        text_reasoning_model_layout = QHBoxLayout()
+        text_reasoning_model_label = QLabel("Text-reasoning Model:")
+        self.text_reasoning_model_combo = QComboBox()
+        self.text_reasoning_model_combo.addItems(self.get_model_names_by_type("text-reasoning"))
+        text_reasoning_model_layout.addWidget(text_reasoning_model_label)
+        text_reasoning_model_layout.addWidget(self.text_reasoning_model_combo)
+        text_reasoning_model_layout.addStretch()
+        layout.addLayout(text_reasoning_model_layout)
+
         multimodal_model_layout = QHBoxLayout()
         multimodal_model_label = QLabel("Multimodal Model:")
         self.multimodal_model_combo = QComboBox()
