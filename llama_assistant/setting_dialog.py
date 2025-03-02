@@ -15,6 +15,9 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QListWidget,
     QLabel,
+    QScrollArea,
+    QWidget,
+    QGridLayout,
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
@@ -31,20 +34,36 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
-        self.main_layout = QVBoxLayout(self)
+        self.setMinimumWidth(950)
+        self.setMinimumHeight(500)
 
-        # General Settings Group
+        # Create main layout with scrolling
+        main_container = QWidget()
+        self.main_layout = QVBoxLayout()
+        main_container.setLayout(self.main_layout)
+
+        # Set up scrollable area
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(main_container)
+
+        # Create a grid layout for organized settings display
+        self.grid_layout = QGridLayout()
+        self.main_layout.addLayout(self.grid_layout)
+
+        # General Settings Group (column 1)
         self.create_general_settings_group()
 
-        # Appearance Settings Group
+        # Appearance Settings Group (column 1)
         self.create_appearance_settings_group()
 
-        # Model Settings Group
+        # Model Settings Group (column 2)
         self.create_model_settings_group()
 
-        # Voice Activation Settings Group
+        # Voice Activation Settings Group (column 1)
         self.create_voice_activation_settings_group()
 
+        # RAG Settings Group (column 2)
         self.create_rag_settings_group()
 
         # Create a horizontal layout for the save button
@@ -56,6 +75,10 @@ class SettingsDialog(QDialog):
 
         # Add the button layout to the main layout
         self.main_layout.addLayout(button_layout)
+
+        # Set the scroll area as the main widget
+        main_outer_layout = QVBoxLayout(self)
+        main_outer_layout.addWidget(scroll_area)
 
         self.load_settings()
 
@@ -76,7 +99,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.reset_shortcut_button)
 
         group_box.setLayout(layout)
-        self.main_layout.addWidget(group_box)
+        self.grid_layout.addWidget(group_box, 0, 0)
 
     def create_appearance_settings_group(self):
         group_box = QGroupBox("Appearance Settings")
@@ -101,73 +124,59 @@ class SettingsDialog(QDialog):
         layout.addLayout(transparency_layout)
 
         group_box.setLayout(layout)
-        self.main_layout.addWidget(group_box)
+        self.grid_layout.addWidget(group_box, 1, 0)
 
     def create_model_settings_group(self):
         group_box = QGroupBox("Model Settings")
         layout = QVBoxLayout()
 
-        text_model_layout = QHBoxLayout()
-        text_model_label = QLabel("Text-only Model:")
+        # Models selection in form layout
+        models_form = QFormLayout()
+        models_form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+
         self.text_model_combo = QComboBox()
         self.text_model_combo.addItems(self.get_model_names_by_type("text"))
-        text_model_layout.addWidget(text_model_label)
-        text_model_layout.addWidget(self.text_model_combo)
-        text_model_layout.addStretch()
-        layout.addLayout(text_model_layout)
+        models_form.addRow("Text-only Model:", self.text_model_combo)
 
-        text_reasoning_model_layout = QHBoxLayout()
-        text_reasoning_model_label = QLabel("Text-reasoning Model:")
         self.text_reasoning_model_combo = QComboBox()
         self.text_reasoning_model_combo.addItems(self.get_model_names_by_type("text-reasoning"))
-        text_reasoning_model_layout.addWidget(text_reasoning_model_label)
-        text_reasoning_model_layout.addWidget(self.text_reasoning_model_combo)
-        text_reasoning_model_layout.addStretch()
-        layout.addLayout(text_reasoning_model_layout)
+        models_form.addRow("Text-reasoning Model:", self.text_reasoning_model_combo)
 
-        multimodal_model_layout = QHBoxLayout()
-        multimodal_model_label = QLabel("Multimodal Model:")
         self.multimodal_model_combo = QComboBox()
         self.multimodal_model_combo.addItems(self.get_model_names_by_type("image"))
-        multimodal_model_layout.addWidget(multimodal_model_label)
-        multimodal_model_layout.addWidget(self.multimodal_model_combo)
-        multimodal_model_layout.addStretch()
-        layout.addLayout(multimodal_model_layout)
+        models_form.addRow("Multimodal Model:", self.multimodal_model_combo)
 
-        context_len_layout = QHBoxLayout()
-        context_len_label = QLabel("Context Length:")
+        layout.addLayout(models_form)
+
+        # Generation parameters in a grid layout
+        grid_layout = QGridLayout()
+        grid_layout.setColumnStretch(1, 1)
+        grid_layout.setColumnStretch(3, 1)
+
         self.context_len_input = QLineEdit()
-        context_len_layout.addWidget(context_len_label)
-        context_len_layout.addWidget(self.context_len_input)
-        layout.addLayout(context_len_layout)
+        grid_layout.addWidget(QLabel("Context Length:"), 0, 0)
+        grid_layout.addWidget(self.context_len_input, 0, 1)
 
-        temperature_layout = QHBoxLayout()
-        temperature_label = QLabel("Temperature:")
         self.temperature_input = QLineEdit()
-        temperature_layout.addWidget(temperature_label)
-        temperature_layout.addWidget(self.temperature_input)
-        layout.addLayout(temperature_layout)
+        grid_layout.addWidget(QLabel("Temperature:"), 0, 2)
+        grid_layout.addWidget(self.temperature_input, 0, 3)
 
-        top_p_layout = QHBoxLayout()
-        top_p_label = QLabel("Top p:")
         self.top_p_input = QLineEdit()
-        top_p_layout.addWidget(top_p_label)
-        top_p_layout.addWidget(self.top_p_input)
-        layout.addLayout(top_p_layout)
+        grid_layout.addWidget(QLabel("Top p:"), 1, 0)
+        grid_layout.addWidget(self.top_p_input, 1, 1)
 
-        top_k_layout = QHBoxLayout()
-        top_k_label = QLabel("Top k:")
         self.top_k_input = QLineEdit()
-        top_k_layout.addWidget(top_k_label)
-        top_k_layout.addWidget(self.top_k_input)
-        layout.addLayout(top_k_layout)
+        grid_layout.addWidget(QLabel("Top k:"), 1, 2)
+        grid_layout.addWidget(self.top_k_input, 1, 3)
+
+        layout.addLayout(grid_layout)
 
         self.manage_custom_models_button = QPushButton("Manage Custom Models")
         self.manage_custom_models_button.clicked.connect(self.open_custom_models_dialog)
         layout.addWidget(self.manage_custom_models_button)
 
         group_box.setLayout(layout)
-        self.main_layout.addWidget(group_box)
+        self.grid_layout.addWidget(group_box, 0, 1, 2, 1)
 
     def create_voice_activation_settings_group(self):
         group_box = QGroupBox("Voice Activation Settings")
@@ -181,51 +190,46 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.hey_llama_mic_checkbox)
 
         group_box.setLayout(layout)
-        self.main_layout.addWidget(group_box)
+        self.grid_layout.addWidget(group_box, 2, 0)
 
     def create_rag_settings_group(self):
         group_box = QGroupBox("RAG Settings")
         layout = QVBoxLayout()
 
-        embed_model_layout = QHBoxLayout()
-        embed_model_label = QLabel("Text-only Model:")
+        # Embed model selection
+        form_layout = QFormLayout()
+        form_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+
         self.embed_model_combo = QComboBox()
         self.embed_model_combo.addItems(config.DEFAULT_EMBEDING_MODELS)
-        embed_model_layout.addWidget(embed_model_label)
-        embed_model_layout.addWidget(self.embed_model_combo)
-        embed_model_layout.addStretch()
-        layout.addLayout(embed_model_layout)
+        form_layout.addRow("Embed Model:", self.embed_model_combo)
+        layout.addLayout(form_layout)
 
-        chunk_size_layout = QHBoxLayout()
-        chunk_size_label = QLabel("Chunk Size:")
+        # RAG parameters organized in a grid
+        params_layout = QGridLayout()
+        params_layout.setColumnStretch(1, 1)
+        params_layout.setColumnStretch(3, 1)
+
         self.chunk_size_input = QLineEdit()
-        chunk_size_layout.addWidget(chunk_size_label)
-        chunk_size_layout.addWidget(self.chunk_size_input)
-        layout.addLayout(chunk_size_layout)
+        params_layout.addWidget(QLabel("Chunk Size:"), 0, 0)
+        params_layout.addWidget(self.chunk_size_input, 0, 1)
 
-        chunk_overlap_layout = QHBoxLayout()
-        chunk_overlap_label = QLabel("Chunk Overlap:")
         self.chunk_overlap_input = QLineEdit()
-        chunk_overlap_layout.addWidget(chunk_overlap_label)
-        chunk_overlap_layout.addWidget(self.chunk_overlap_input)
-        layout.addLayout(chunk_overlap_layout)
+        params_layout.addWidget(QLabel("Chunk Overlap:"), 0, 2)
+        params_layout.addWidget(self.chunk_overlap_input, 0, 3)
 
-        max_retrieval_top_k_layout = QHBoxLayout()
-        max_retrieval_top_k_label = QLabel("Max Retrieval Top k:")
         self.max_retrieval_top_k_input = QLineEdit()
-        max_retrieval_top_k_layout.addWidget(max_retrieval_top_k_label)
-        max_retrieval_top_k_layout.addWidget(self.max_retrieval_top_k_input)
-        layout.addLayout(max_retrieval_top_k_layout)
+        params_layout.addWidget(QLabel("Max Retrieval Top k:"), 1, 0)
+        params_layout.addWidget(self.max_retrieval_top_k_input, 1, 1)
 
-        similarity_threshold_layout = QHBoxLayout()
-        similarity_threshold_label = QLabel("Similarity Threshold:")
         self.similarity_threshold_input = QLineEdit()
-        similarity_threshold_layout.addWidget(similarity_threshold_label)
-        similarity_threshold_layout.addWidget(self.similarity_threshold_input)
-        layout.addLayout(similarity_threshold_layout)
+        params_layout.addWidget(QLabel("Similarity Threshold:"), 1, 2)
+        params_layout.addWidget(self.similarity_threshold_input, 1, 3)
+
+        layout.addLayout(params_layout)
 
         group_box.setLayout(layout)
-        self.main_layout.addWidget(group_box)
+        self.grid_layout.addWidget(group_box, 2, 1)
 
     def accept(self):
         valid, message = validate_numeric_field(
