@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QShortcut,
     QSizePolicy,
     QSpacerItem,
+    QLabel,
 )
 from PyQt5.QtCore import (
     Qt,
@@ -75,6 +76,7 @@ class UIManager:
         self.parent = parent
         self.init_ui()
         self.update_styles()  # Call update_styles after initializing UI
+        self.update_model_display()  # Initialize model display
 
     def init_ui(self):
         self.parent.setWindowTitle("AI Assistant")
@@ -329,6 +331,35 @@ class UIManager:
             button.setStyleSheet(button_style)
 
         self.set_reasoning_button_style()
+
+    def update_model_display(self):
+        # Determine which model is currently active
+        active_model_info = ""
+
+        if self.parent.reasoning_enabled and self.parent.current_text_reasoning_model:
+            # Find the model details for the text reasoning model
+            for model in self.parent.config.models:
+                if model["model_id"] == self.parent.current_text_reasoning_model:
+                    active_model_info = f"{model['model_name']} (Reasoning)"
+                    break
+        elif self.parent.dropped_image and self.parent.current_multimodal_model:
+            # Find the model details for the multimodal model
+            for model in self.parent.config.models:
+                if model["model_id"] == self.parent.current_multimodal_model:
+                    active_model_info = f"{model['model_name']} (Multimodal)"
+                    break
+        elif self.parent.current_text_model:
+            # Find the model details for the text model
+            for model in self.parent.config.models:
+                if model["model_id"] == self.parent.current_text_model:
+                    active_model_info = f"{model['model_name']} (Text)"
+                    break
+
+        if not active_model_info:
+            active_model_info = "No model active"
+
+        # Update the input field placeholder
+        self.input_field.set_model_info(active_model_info)
 
     def set_reasoning_button_style(self):
         opacity = self.parent.settings.get("transparency", 90) / 100

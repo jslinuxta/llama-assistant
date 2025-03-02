@@ -5,6 +5,8 @@ import traceback
 import mistune
 import warnings
 
+from llama_assistant import config
+
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -26,7 +28,7 @@ from PyQt5.QtGui import (
     QMouseEvent,
 )
 
-from llama_assistant import config
+
 from llama_assistant.wake_word_detector import WakeWordDetector
 from llama_assistant.global_hotkey import GlobalHotkey
 from llama_assistant.setting_dialog import SettingsDialog
@@ -45,6 +47,7 @@ class LlamaAssistant(QMainWindow):
         super().__init__()
         self.wake_word_detector = None
         self.load_settings()
+        self.config = config  # Make config accessible to UIManager
         self.ui_manager = UIManager(self)
         self.tray_manager = TrayManager(self)
         self.screen_capture_widget = ScreenCaptureWidget(self)
@@ -142,6 +145,10 @@ class LlamaAssistant(QMainWindow):
         self.rag_setting = self.settings.get("rag")
         self.reasoning_enabled = self.settings.get("reasoning_enabled")
 
+        # Update model display if UI manager exists
+        if hasattr(self, "ui_manager"):
+            self.ui_manager.update_model_display()
+
     def setup_global_shortcut(self):
         try:
             if hasattr(self, "global_hotkey"):
@@ -213,6 +220,7 @@ class LlamaAssistant(QMainWindow):
         self.settings["reasoning_enabled"] = self.reasoning_enabled
         self.save_settings()
         self.ui_manager.set_reasoning_button_style()
+        self.ui_manager.update_model_display()
         print(f"Reasoning is now {'enabled' if self.reasoning_enabled else 'disabled'}.")
 
     def on_ocr_button_clicked(self):
