@@ -14,9 +14,8 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QMessageBox,
     QSystemTrayIcon,
-    QRubberBand,
 )
-from PyQt5.QtCore import Qt, QPoint, QTimer, QSize, QRect
+from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import (
     QPixmap,
     QPainter,
@@ -24,7 +23,7 @@ from PyQt5.QtGui import (
     QDropEvent,
     QBitmap,
     QTextCursor,
-    QFont,
+    QMouseEvent,
 )
 
 from llama_assistant import config
@@ -58,11 +57,30 @@ class LlamaAssistant(QMainWindow):
         self.is_listening = False
         self.image_label = None
         self.current_text_model = self.settings.get("text_model")
+        self.current_text_reasoning_model = self.settings.get("text_reasoning_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
         self.processing_thread = None
         self.markdown_creator = mistune.create_markdown()
         self.gen_mark_down = True
         self.has_ocr_context = False
+
+        # Add drag-drop move support
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.oldPos = None
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self.oldPos is not None:
+            delta = event.globalPos() - self.oldPos
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.oldPos = event.globalPos()
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            self.oldPos = None
 
     def capture_screenshot(self):
         self.hide()
@@ -119,8 +137,10 @@ class LlamaAssistant(QMainWindow):
             self.deinit_wake_word_detector()
         self.current_text_model = self.settings.get("text_model")
         self.current_multimodal_model = self.settings.get("multimodal_model")
+        self.current_text_reasoning_model = self.settings.get("text_reasoning_model")
         self.generation_setting = self.settings.get("generation")
         self.rag_setting = self.settings.get("rag")
+        self.reasoning_enabled = self.settings.get("reasoning_enabled")
 
     def setup_global_shortcut(self):
         try:
@@ -188,6 +208,13 @@ class LlamaAssistant(QMainWindow):
             self.raise_()
             self.ui_manager.input_field.setFocus()
 
+    def toggle_reasoning(self):
+        self.reasoning_enabled = not self.reasoning_enabled
+        self.settings["reasoning_enabled"] = self.reasoning_enabled
+        self.save_settings()
+        self.ui_manager.set_reasoning_button_style()
+        print(f"Reasoning is now {'enabled' if self.reasoning_enabled else 'disabled'}.")
+
     def on_ocr_button_clicked(self):
         self.show()
         self.show_chat_box()
@@ -219,6 +246,10 @@ class LlamaAssistant(QMainWindow):
         self.show()
         self.screen_capture_widget.hide()
         self.has_ocr_context = True
+        # Show the screenshot as reference image
+        if config.ocr_tmp_file.exists():
+            self.dropped_image = str(config.ocr_tmp_file)
+            self.show_image_thumbnail(self.dropped_image)
 
     def on_submit(self):
         message = self.ui_manager.input_field.toPlainText()
@@ -230,6 +261,7 @@ class LlamaAssistant(QMainWindow):
             self.clear_chat()
             self.remove_image_thumbnail()
             self.dropped_image = None
+            self.has_ocr_context = False
 
             for file_path in self.dropped_files:
                 self.remove_file_thumbnail(self.file_containers[file_path], file_path)
@@ -239,7 +271,7 @@ class LlamaAssistant(QMainWindow):
         self.last_response = ""
         self.gen_mark_down = True
 
-        if self.dropped_image:
+        if self.dropped_image and not self.has_ocr_context:
             self.process_image_with_prompt(self.dropped_image, self.dropped_files, message)
             self.dropped_image = None
             self.remove_image_thumbnail()
@@ -277,7 +309,9 @@ class LlamaAssistant(QMainWindow):
         self.start_cursor_pos = self.ui_manager.chat_box.textCursor().position()
 
         self.processing_thread = ProcessingThread(
-            self.current_text_model,
+            self.current_text_model
+            if not self.reasoning_enabled
+            else self.current_text_reasoning_model,
             self.generation_setting,
             self.rag_setting,
             prompt,
@@ -348,6 +382,10 @@ class LlamaAssistant(QMainWindow):
         formatted_text = ""
         if self.gen_mark_down:
             markdown_response = self.markdown_creator(self.last_response)
+            markdown_response = markdown_response.replace(
+                "&lt;think&gt;", "<div class='think'>Thinking:<p>"
+            )
+            markdown_response = markdown_response.replace("&lt;/think&gt;", "</div>")
             # Since cannot change the font size of the h1, h2 tag, we will replace it with h3
             markdown_response = markdown_response.replace("<h1>", "<h3>").replace("</h1>", "</h3>")
             markdown_response = markdown_response.replace("<h2>", "<h3>").replace("</h2>", "</h3>")
@@ -560,6 +598,7 @@ class LlamaAssistant(QMainWindow):
             self.image_label.setParent(None)
             self.image_label = None
             self.dropped_image = None
+            self.has_ocr_context = False
             self.ui_manager.input_field.setPlaceholderText("Ask me anything...")
             self.setFixedHeight(self.height() - 110)  # Decrease height after removing image
 

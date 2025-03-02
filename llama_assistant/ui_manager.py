@@ -25,6 +25,7 @@ from llama_assistant.icons import (
     clear_icon_svg,
     microphone_icon_svg,
     crosshair_icon_svg,
+    reasoning_icon_svg,
 )
 
 
@@ -51,6 +52,19 @@ class CustomQTextBrowser(QTextBrowser):
                 font-size: 15px;
                 font-family: Consolas, "Courier New", monospace;
                 overflow: hidden;
+            }
+            div.think {
+                display: block;
+                padding: 10px;
+                color: #666666;
+                font-style: italic;
+                margin: 10px 0;
+            }
+            div.think p {
+                color: #666666;
+                margin-top: 5px;
+                margin-bottom: 5px;
+                line-height: 1.5;
             }
         """
         )
@@ -161,6 +175,17 @@ class UIManager:
         self.file_layout = QHBoxLayout()
         self.file_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         top_layout.addLayout(self.file_layout)
+
+        # Add tool layout
+        self.tool_layout = QHBoxLayout()
+        self.tool_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        top_layout.addLayout(self.tool_layout)
+
+        self.reasoning_button = QPushButton("Reason", self.parent)
+        # self.reasoning_button.setStyleSheet(self.get_reasoning_button_style())
+        self.reasoning_button.setIcon(create_icon_from_svg(reasoning_icon_svg))
+        self.reasoning_button.clicked.connect(self.parent.toggle_reasoning)
+        self.tool_layout.addWidget(self.reasoning_button)
 
         button_layout = QHBoxLayout()
         button_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -302,3 +327,35 @@ class UIManager:
         """
         for button in [self.copy_button, self.clear_button]:
             button.setStyleSheet(button_style)
+
+        self.set_reasoning_button_style()
+
+    def set_reasoning_button_style(self):
+        opacity = self.parent.settings.get("transparency", 90) / 100
+        base_style = f"""
+            border: none;
+            border-radius: 20px;
+            color: white;
+            padding: 10px 15px;
+            font-size: 16px;
+        """
+
+        if self.parent.reasoning_enabled:
+            button_style = f"""
+                QPushButton {{
+                    {base_style}
+                    padding: 2.5px 5px;
+                    border-radius: 5px;
+                    background-color: rgba{QColor(self.parent.settings["color"]).lighter(300).getRgb()[:3] + (opacity,)};
+                }}
+            """
+        else:
+            button_style = f"""
+                QPushButton {{
+                    {base_style}
+                    padding: 2.5px 5px;
+                    border-radius: 5px;
+                    background-color: rgba{QColor(self.parent.settings["color"]).lighter(120).getRgb()[:3] + (opacity,)};
+                }}
+            """
+        self.reasoning_button.setStyleSheet(button_style)

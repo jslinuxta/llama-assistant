@@ -9,6 +9,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 ![Llama 3](https://img.shields.io/badge/Llama-3-green.svg)
+![DeepSeek](https://img.shields.io/badge/DeepSeek-R1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 ![Version](https://img.shields.io/badge/version-0.1.0-red.svg)
 ![Stars](https://img.shields.io/github/stars/nrl-ai/llama-assistant.svg)
@@ -37,6 +38,10 @@ https://github.com/user-attachments/assets/af2c544b-6d46-4c44-87d8-9a051ba213db
   - [Qwen2.5-1.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF) (4-bit quantized).
   - [gemma-2-2b-it](https://huggingface.co/lmstudio-community/gemma-2-2b-it-GGUF-Q4_K_M) (4-bit quantized).
   - And other models that [LlamaCPP](https://github.com/ggerganov/llama.cpp) supports via custom models. [See the list](https://github.com/ggerganov/llama.cpp).
+
+- 🧠 Text-only with reasoning models:
+  - [DeepSeek-R1-Distill-Qwen-1.5B](https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF) (4/6-bit quantized).
+  - [DeepSeek-R1-Distill-Llama-8B](https://huggingface.co/bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF) (4-bit quantized).
 
 - 🖼️ Multimodal models:
   - [Moondream2](https://huggingface.co/vikhyatk/moondream2).

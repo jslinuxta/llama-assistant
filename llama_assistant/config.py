@@ -9,6 +9,8 @@ DEFAULT_SETTINGS = {
     "transparency": 95,
     "text_model": "hugging-quants/Llama-3.2-1B-Instruct-Q4_K_M-GGUF",
     "multimodal_model": "vikhyatk/moondream2",
+    "text_reasoning_model": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF-Q4_K_M",
+    "reasoning_enabled": False,
     "hey_llama_chat": False,
     "hey_llama_mic": False,
     "generation": {
@@ -50,6 +52,7 @@ DEFAULT_EMBEDING_MODELS = [
 ]
 
 DEFAULT_MODELS = [
+    # LLMs
     {
         "model_name": "Llama-3.2-1B-Instruct-Q4_K_M-GGUF",
         "model_id": "hugging-quants/Llama-3.2-1B-Instruct-Q4_K_M-GGUF",
@@ -106,6 +109,32 @@ DEFAULT_MODELS = [
         "repo_id": "lmstudio-community/gemma-2-2b-it-GGUF",
         "filename": "gemma-2-2b-it-Q4_K_M.gguf",
     },
+    # Reasoning Models
+    {
+        "model_name": "DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+        "model_id": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF-Q4_K_M",
+        "model_type": "text-reasoning",
+        "model_path": None,
+        "repo_id": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+        "filename": "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+    },
+    {
+        "model_name": "DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+        "model_id": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF-Q6_K",
+        "model_type": "text-reasoning",
+        "model_path": None,
+        "repo_id": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+        "filename": "DeepSeek-R1-Distill-Qwen-1.5B-Q6_K.gguf",
+    },
+    {
+        "model_name": "DeepSeek-R1-Distill-Llama-8B-GGUF",
+        "model_id": "bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF-Q4_K_M",
+        "model_type": "text-reasoning",
+        "model_path": None,
+        "repo_id": "bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF",
+        "filename": "DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
+    },
+    # VLMs
     {
         "model_name": "Moondream2",
         "model_id": "vikhyatk/moondream2",
@@ -147,6 +176,7 @@ DEFAULT_MODELS = [
         "filename": "*Q8_0.gguf",
     },
 ]
+
 
 home_dir = Path.home()
 llama_assistant_dir = home_dir / "llama_assistant"
